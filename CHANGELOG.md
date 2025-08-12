@@ -2,6 +2,12 @@
 
 All notable changes to the New Teachers App will be documented in this file.
 
+## [v0.0.29.00] - 2024-12-19
+
+### Changed
+- Updated tooltip text from "create new students" to "create new student folders" for clarity
+- Deployed as new app version v0.0.29
+
 ## [v0.0.28.02] - 2024-12-19
 
 ### Changed

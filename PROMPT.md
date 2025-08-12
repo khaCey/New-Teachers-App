@@ -10,7 +10,7 @@ This is a Google Apps Script web application for managing daily lessons, student
 - **App Version** (v0.0.28): Increments when deployed to Google Apps Script
 - **Development Version** (v0.0.28.01, v0.0.28.02, etc.): Increments with each code change
 
-**Current Version:** v0.0.28.01
+**Current Version:** v0.0.29.00
 
 ## File Structure
 
