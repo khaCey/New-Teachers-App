@@ -4,13 +4,15 @@
   <base target="__top">
   <meta charset="utf-8">
   <title>Today's Students Dashboard</title>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"
-    rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
   <style>
     body {
-      font-family: "Roboto", Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       margin: 0;
+      padding: 10px 0;  /* added small padding instead of default margins */
       background-color: #f4f6f8;
       color: #333;
       max-height: 100vh;
@@ -30,7 +32,7 @@
       background: #fff;
       border-radius: 12px;
       box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-      padding: 32px;
+      padding: 20px;  /* reduced from 32px to 20px */
       z-index: -1;
     }
     .time-column {
@@ -99,6 +101,59 @@
     .event-block.complete { border-left-color: #388E3C; background: #C8E6C9	; }
     .event-block.complete:hover { border-left-color: #2E7D32; background: #A5D6A7; }
     .lesson-folder { font-weight:700; }
+
+    /* FeatureNudge tooltip styles */
+    .fnudge { 
+      position: absolute; 
+      max-width: 280px; 
+      background: #111; 
+      color: #fff; 
+      border-radius: 8px; 
+      padding: 10px 12px; 
+      box-shadow: 0 10px 20px rgba(0,0,0,.15); 
+      display: none; 
+      z-index: 9999; 
+    }
+    .fnudge--show { 
+      display: block; 
+    }
+    .fnudge__title { 
+      margin: 0 0 4px; 
+      font-size: 14px; 
+      font-weight: 800; 
+    }
+    .fnudge__body { 
+      margin: 0 0 8px; 
+      font-size: 12px; 
+      line-height: 1.4; 
+      color: #e5e7eb; 
+    }
+    .fnudge__actions { 
+      display: flex; 
+      gap: 8px; 
+    }
+    .fnudge__btn { 
+      border: 0; 
+      border-radius: 6px; 
+      padding: 6px 10px; 
+      font-size: 12px; 
+      cursor: pointer; 
+    }
+    .fnudge__btn--primary { 
+      background: #2196f3; 
+      color: #fff; 
+    }
+    .fnudge__btn--secondary { 
+      background: #e5e7eb; 
+      color: #111; 
+    }
+    .fnudge__arrow { 
+      position: absolute; 
+      width: 12px; 
+      height: 12px; 
+      background: #111; 
+      transform: rotate(45deg); 
+    }
     .lesson-names  { color:#555; margin-bottom:2px; }
     .lesson-date   { color:#888; }
     .current-time-line {
@@ -124,16 +179,19 @@
     .modal {
       display: none;
       position: fixed;
-      top: 0; left: 0;
-      width: 100vw; height: 100vh;
-      background: rgba(0,0,0,0.5);
-      justify-content: center;
-      align-items: center;
-      z-index: 100;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(2px);
     }
-    /* when we want to show it */
+
     .modal.show {
       display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     /* The white box inside the overlay */
@@ -145,7 +203,8 @@
       width: 90%;
       box-shadow: 0 8px 32px rgba(0,0,0,0.12);
       position: relative;
-      font-family: "Roboto", sans-serif;
+      font-family: "Inter", sans-serif;
+      z-index: 101;
     }
 
     /* Close "×" button */
@@ -193,38 +252,566 @@
       box-shadow: 0 0 0 2px rgba(33, 145, 80, 0.2);
     }
 
-    /* Primary button */
-    .modal-content button {
-      margin-top: 1.5rem;
-      width: 100%;
-      padding: 0.65rem;
-      font-size: 1rem;
-      font-weight: 600;
-      color: #fff;
-      background-color: #219150;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: background-color 0.2s, box-shadow 0.2s;
-    }
-    .modal-content button:hover {
-      background-color: #197a40;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
 
-    /* If you have secondary buttons (e.g. "Back") */
-    .modal-content button.secondary {
-      background-color: #ccc;
-      color: #333;
-      margin-top: 0.75rem;
-    }
-    .modal-content button.secondary:hover {
-      background-color: #bbb;
-    }
 
     /* Optional: slightly lighten your overlay */
     .modal {
       background: rgba(0, 0, 0, 0.4);
+    }
+
+    /* Upload Modal Specific Styles */
+    .upload-modal-content {
+      max-width: 720px !important;
+      width: 90% !important;
+      padding: 0 !important;
+      border-radius: 16px !important;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+      border: 1px solid rgba(0, 0, 0, 0.05) !important;
+      overflow: hidden;
+      font-family: "Inter", sans-serif !important;
+    }
+
+    /* Header */
+    .upload-modal-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 20px;
+      padding-bottom: 12px;
+    }
+
+    .upload-modal-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      border: 1px solid #d1fae5;
+      background: #ecfdf5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .upload-icon-svg {
+      width: 20px;
+      height: 20px;
+      color: #059669;
+    }
+
+    .upload-modal-title {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .upload-modal-title h2 {
+      font-size: 18px !important;
+      font-weight: 800 !important;
+      color: #111827 !important;
+      margin: 0 !important;
+      text-align: left !important;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    }
+
+    .upload-modal-header .close {
+      margin-left: auto;
+      padding: 8px;
+      border-radius: 8px;
+      color: #9ca3af;
+      font-size: 20px;
+      top: auto !important;
+      right: auto !important;
+      position: static !important;
+      cursor: pointer;
+    }
+
+    .upload-modal-header .close:hover {
+      background: #f3f4f6;
+      color: #111827;
+    }
+
+    /* Divider */
+    .upload-modal-divider {
+      height: 1px;
+      background: #e5e7eb;
+      margin: 0 20px;
+    }
+
+    /* Form */
+    .upload-modal-form {
+      padding: 20px;
+    }
+
+    .upload-form-container {
+      background: #f1f5f9;
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .upload-form-container label {
+      display: block;
+      font-size: 14px;
+      font-weight: 700;
+      color: #4b5563;
+      margin-bottom: 8px;
+      margin-top: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    }
+
+    .upload-input-container {
+      position: relative;
+      margin-bottom: 20px;
+      height: 48px;
+      background: #f3f4f6;
+      border-radius: 8px;
+    }
+
+    .upload-input-container:last-child {
+      margin-bottom: 8px;
+    }
+
+    .upload-input-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 16px;
+      height: 16px;
+      color: #6b7280;
+      pointer-events: none;
+    }
+
+    .upload-input-container input {
+      position: absolute !important;
+      inset: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      background: transparent !important;
+      padding-left: 44px !important;
+      padding-right: 12px !important;
+      border-radius: 8px !important;
+      outline: none !important;
+      border: 1px solid #d1d5db !important;
+      font-size: 14px !important;
+      font-weight: 700 !important;
+      color: #111827 !important;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+      box-sizing: border-box !important;
+    }
+
+    .upload-input-container input:focus {
+      border-color: #059669;
+      box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+    }
+
+    .upload-input-container input[type="date"] {
+      font-weight: 400;
+    }
+
+    /* Actions */
+    .upload-modal-actions {
+      padding: 0 20px 20px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    .upload-btn {
+      width: 100% !important;
+      font-weight: 700 !important;
+      padding: 10px 16px !important;
+      border-radius: 12px !important;
+      border: none !important;
+      cursor: pointer !important;
+      font-size: 14px !important;
+      display: flex !important;
+      justify-content: center !important;
+      align-items: center !important;
+      gap: 8px !important;
+      transition: all 0.2s ease !important;
+      text-decoration: none !important;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+      margin: 0 !important;
+    }
+
+    .upload-btn-primary {
+      background: #059669 !important;
+      color: white !important;
+    }
+
+    .upload-btn-primary:hover {
+      background: #047857 !important;
+    }
+
+    .upload-btn-secondary {
+      background: #3b82f6 !important;
+      color: white !important;
+    }
+
+    .upload-btn-secondary:hover {
+      background: #2563eb !important;
+    }
+
+    .upload-btn-icon {
+      width: 16px !important;
+      height: 16px !important;
+      flex-shrink: 0 !important;
+    }
+
+    /* Loading states for upload buttons */
+    .upload-btn.loading {
+      position: relative;
+      color: transparent !important;
+      pointer-events: none;
+    }
+
+    .upload-btn.loading::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 1em;
+      height: 1em;
+      margin: -0.5em 0 0 -0.5em;
+      border: 2px solid #fff;
+      border-top-color: rgba(255,255,255,0.5);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    /* Success Modal Specific Styles */
+    .success-modal-content {
+      max-width: 560px !important;
+      width: 90% !important;
+      padding: 0 !important;
+      border-radius: 16px !important;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12) !important;
+      border: 1px solid rgba(0, 0, 0, 0.05) !important;
+      overflow: hidden;
+      font-family: "Inter", sans-serif !important;
+      transform: translateY(6px) scale(0.98);
+      opacity: 0;
+      animation: pop 0.24s ease-out forwards;
+    }
+
+    @keyframes pop {
+      to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+      }
+    }
+
+    /* Success Header */
+    .success-modal-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 20px 20px 12px 20px;
+    }
+
+    .success-modal-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      border: 1px solid #d1fae5;
+      background: #ecfdf5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .success-icon-svg {
+      width: 20px;
+      height: 20px;
+      color: #059669;
+    }
+
+    .success-modal-title {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .success-modal-title h3 {
+      font-size: 18px !important;
+      font-weight: 700 !important;
+      color: #0b0b0c !important;
+      margin: 0 !important;
+      text-align: left !important;
+      font-family: "Inter", sans-serif !important;
+    }
+
+    .success-file-name {
+      margin: 6px 0 0 0 !important;
+      font-size: 14px !important;
+      color: #5b5f67 !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      font-family: "Inter", sans-serif !important;
+    }
+
+    .success-modal-header .close {
+      margin-left: auto;
+      padding: 8px;
+      border-radius: 8px;
+      color: #6b7280;
+      font-size: 20px;
+      top: auto !important;
+      right: auto !important;
+      position: static !important;
+      cursor: pointer;
+      border: 0;
+      background: transparent;
+    }
+
+    .success-modal-header .close:hover {
+      color: #111827;
+      background: #f3f4f6;
+    }
+
+    /* Success Divider */
+    .success-modal-divider {
+      height: 1px;
+      background: #ececee;
+      margin: 0 20px;
+    }
+
+    /* Success Body */
+    .success-modal-body {
+      padding: 14px 20px;
+      color: #374151;
+      font-size: 14px;
+      font-family: "Inter", sans-serif !important;
+    }
+
+    /* Success Actions */
+    .success-modal-actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      padding: 8px 20px 20px 20px;
+    }
+
+    @media (min-width: 520px) {
+      .success-modal-actions {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    /* Form field styles for confirmation modal */
+    .space-y-3 > * + * {
+      margin-top: 0.75rem;
+    }
+
+    .flex {
+      display: flex;
+    }
+
+    .items-center {
+      align-items: center;
+    }
+
+    .gap-3 {
+      gap: 0.75rem;
+    }
+
+    .ml-auto {
+      margin-left: auto;
+    }
+
+    .w-60 {
+      width: 15rem;
+    }
+
+    .border {
+      border-width: 1px;
+    }
+
+    .border-gray-300 {
+      border-color: #d1d5db;
+    }
+
+    .rounded-lg {
+      border-radius: 0.5rem;
+    }
+
+    .px-2 {
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+    }
+
+    .py-1 {
+      padding-top: 0.25rem;
+      padding-bottom: 0.25rem;
+    }
+
+    .text-sm {
+      font-size: 0.875rem;
+      line-height: 1.25rem;
+    }
+
+    .text-gray-700 {
+      color: #374151;
+    }
+
+    .font-semibold {
+      font-weight: 600;
+    }
+
+    .min-h-\[1\.25rem\] {
+      min-height: 1.25rem;
+    }
+
+    .text-red-600 {
+      color: #dc2626;
+    }
+
+    .text-xs {
+      font-size: 0.75rem;
+      line-height: 1rem;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .space-y-2 > * + * {
+      margin-top: 0.5rem;
+    }
+
+    /* Button states */
+    .opacity-60 {
+      opacity: 0.6;
+    }
+
+    .cursor-not-allowed {
+      cursor: not-allowed;
+    }
+
+    /* Additional styles to match mockup exactly */
+    .success-modal-body {
+      padding: 14px 20px;
+      color: #374151;
+      font-size: 14px;
+    }
+
+    .success-modal-body .space-y-3 {
+      margin-top: 0;
+    }
+
+    .success-modal-body .space-y-3 > *:first-child {
+      margin-top: 0;
+    }
+
+    .success-modal-body .space-y-3 > * + * {
+      margin-top: 0.75rem;
+    }
+
+    /* Form field layout - exact copy from mockup */
+    .success-modal-body .flex {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .success-modal-body .flex:last-child {
+      margin-bottom: 0;
+    }
+
+    .success-modal-body .font-semibold {
+      font-weight: 600;
+      color: #111827;
+      min-width: 120px;
+    }
+
+    .success-modal-body .ml-auto {
+      margin-left: auto;
+    }
+
+    .success-modal-body .w-60 {
+      width: 240px;
+    }
+
+    /* Input field styling - exact copy from mockup */
+    .success-modal-body input,
+    .success-modal-body select {
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 14px;
+      line-height: 1.4;
+      background: white;
+      color: #111827;
+      width: 240px;
+    }
+
+    .success-modal-body input:focus,
+    .success-modal-body select:focus {
+      outline: none;
+      border-color: #059669;
+      box-shadow: 0 0 0 1px #059669;
+    }
+
+    /* Icon styling - exact copy from mockup */
+    .success-modal-body .success-icon-svg {
+      width: 16px;
+      height: 16px;
+      color: #6b7280;
+      flex-shrink: 0;
+    }
+
+    /* Label styling */
+    .success-modal-body label {
+      font-weight: 600;
+      color: #111827;
+      min-width: 120px;
+    }
+
+    .success-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      border: 0;
+      cursor: pointer;
+      font-family: "Inter", sans-serif !important;
+      transition: all 0.2s ease;
+    }
+
+    .success-btn-primary {
+      background: #059669 !important;
+      color: #fff !important;
+    }
+
+    .success-btn-primary:hover {
+      background: #047857 !important;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(5, 150, 105, 0.3);
+    }
+
+    .success-btn-secondary {
+      background: #f59e0b !important;
+      color: #fff !important;
+    }
+
+    .success-btn-secondary:hover {
+      background: #d97706 !important;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+    }
+
+    .success-btn-icon {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
     }
     /* add to your <style> */
     button.uploading {
@@ -242,6 +829,57 @@
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
+    
+    /* Loading state for all buttons */
+    button.loading {
+      position: relative;
+      color: transparent !important;
+      pointer-events: none;
+    }
+    
+    button.loading::after {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 1em; height: 1em;
+      margin: -0.5em 0 0 -0.5em;
+      border: 2px solid #fff;
+      border-top-color: rgba(255,255,255,0.5);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    
+    /* Loading state for secondary buttons */
+    button.secondary.loading::after {
+      border: 2px solid #333;
+      border-top-color: rgba(51,51,51,0.5);
+    }
+    
+    /* Loading state for disabled buttons */
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    
+    /* Loading state for link buttons */
+    .a-as-button.loading {
+      position: relative;
+      color: transparent !important;
+      pointer-events: none;
+    }
+    
+    .a-as-button.loading::after {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 1em; height: 1em;
+      margin: -0.5em 0 0 -0.5em;
+      border: 2px solid #fff;
+      border-top-color: rgba(255,255,255,0.5);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    
     @keyframes spin { to { transform: rotate(360deg); } }
     /* ---------- Lesson History Modal Enhancements ---------- */
 
@@ -344,7 +982,7 @@
       #dashboardTitle {
         font-size: 3rem;   /* or whatever size feels right */
         font-weight: 700;  /* keep it bold if you like */
-        margin: 40px 0;
+        margin: 20px 0;    /* reduced from 40px to 20px to move app higher */
       }
       #historyModal{
       }
@@ -380,6 +1018,370 @@
       background: #BDBDBD;
       cursor: not-allowed;
     }
+    .modal-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    .modal-buttons button, .modal-buttons .a-as-button {
+        flex: 1;
+        margin-top: 0;
+        text-align: center;
+        text-decoration: none;
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        padding: 0.65rem;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #fff;
+        background-color: #555;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.2s, box-shadow 0.2s;
+    }
+    .modal-buttons button.secondary, .modal-buttons .a-as-button.secondary {
+        background-color: #6c757d;
+        color: #fff;
+    }
+    .modal-buttons button:hover, .modal-buttons .a-as-button:hover {
+        opacity: 0.9;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .a-as-button.disabled {
+      background-color: #ccc;
+      color: #666;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    /* Button icons for edit lesson modal */
+    .modal-buttons .btn-icon {
+      width: 16px;
+      height: 16px;
+      margin-right: 6px;
+      flex-shrink: 0;
+    }
+
+    .modal-buttons button,
+    .modal-buttons .a-as-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* Evaluation Modal Styles */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1em;
+    }
+    
+    .eval-row {
+      display: flex;
+      gap: 0.5em;
+      margin-bottom: 0.2em;
+    }
+    
+    .eval-row input {
+      flex: 1;
+    }
+    
+    #evaluationModal .modal-content {
+      max-width: 800px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    
+    #evaluationModal h3 {
+      margin-top: 1.5em;
+      margin-bottom: 0.5em;
+      color: #219150;
+    }
+    
+    #evaluationModal textarea {
+      width: 100%;
+      box-sizing: border-box;
+      font-size: 1em;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 0.5rem;
+      resize: vertical;
+    }
+    
+    #evaluationModal input[type="text"] {
+      width: 100%;
+      box-sizing: border-box;
+      font-size: 1em;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 0.5rem;
+    }
+    
+    #evaluationModal button {
+      margin-top: 1em;
+      background-color: #219150;
+      color: white;
+      border: none;
+      padding: 0.75rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1em;
+    }
+    
+    #evaluationModal button:hover {
+      background-color: #197a40;
+    }
+    
+    /* Evaluation Button */
+    .evaluation-btn {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: #ff6b35;
+      color: white;
+      border: none;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      cursor: pointer;
+      z-index: 10;
+    }
+
+    .evaluation-btn:hover {
+      background: #e55a2b;
+    }
+
+    /* Teacher Marker */
+    .teacher {
+      position: absolute;
+      top: 4px;
+      right: 120px;
+      background: #673ab7;
+      color: white;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      z-index: 10;
+    }
+
+    /* Online Marker */
+    .online-marker {
+      position: absolute;
+      top: 4px;
+      right: 60px;
+      background: #2196f3;
+      color: white;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      pointer-events: none;
+    }
+    .online-marker .icon {
+      font-size: 12px;
+      margin-right: 2px;
+    }
+    
+    /* Evaluation Ready Indicator */
+    .evaluation-ready {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: #4caf50;
+      color: white;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    /* Evaluation Table Styling */
+    #evalsTable th,
+    #evalsTable td {
+      text-align: center;
+      padding: 0;
+      width: 50px !important;
+      box-sizing: border-box;
+      outline: 1px solid red;
+    }
+    
+    /* Constrain input widths in evaluation table */
+    #evalsTable input {
+      width: 100% !important;
+      max-width: 100% !important;
+      box-sizing: border-box;
+      font-size: 10px;
+      padding: 2px;
+      border: 1px solid #ccc;
+      border-radius: 2px;
+    }
+    
+    /* Google Docs and Sheets button colors */
+    #lessonNotesBtn {
+      background-color: #4285f4 !important; /* Google Docs blue */
+      color: #fff !important;
+    }
+    #lessonNotesBtn:hover {
+      background-color: #3367d6 !important; /* Darker blue on hover */
+    }
+    
+    #lessonHistoryBtn {
+      background-color: #0f9d58 !important; /* Google Sheets green */
+      color: #fff !important;
+    }
+    #lessonHistoryBtn:hover {
+      background-color: #0b8043 !important; /* Darker green on hover */
+    }
+    
+    /* Also style the buttons in the edit modal */
+    #noteLinkButton:not(.disabled) {
+      background-color: #4285f4 !important; /* Google Docs blue */
+      color: #fff !important;
+    }
+    #noteLinkButton:not(.disabled):hover {
+      background-color: #3367d6 !important;
+    }
+    
+    #historyLinkButton:not(.disabled) {
+      background-color: #0f9d58 !important; /* Google Sheets green */
+      color: #fff !important;
+    }
+    #historyLinkButton:not(.disabled):hover {
+      background-color: #0b8043 !important;
+    }
+    /* Style for select dropdown in evaluation modal */
+    #evaluationModal .modal-content select {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+      margin-top: 0.25rem;
+      margin-bottom: 1.25rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      background: #fff;
+    }
+    #evaluationModal .modal-content select:focus {
+      outline: none;
+      border-color: #219150;
+      box-shadow: 0 0 0 2px rgba(33, 145, 80, 0.2);
+    }
+    /* 1) Marker container stays absolute */
+    .marker-container {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      display: flex;
+      gap: 6px;           /* whatever spacing you like */
+      align-items: center;
+      z-index: 10;
+    }
+
+    /* 2) Child markers become static (in the flex flow) */
+    .marker-container .online-marker,
+    .marker-container .evaluation-btn,
+    .marker-container .teacher {
+      position: static;   /* <-- remove absolute positioning */
+      top: auto;          /* <-- reset any old top/right */
+      right: auto;
+    }
+
+    /* 3) Tweak colours, padding, etc. as before */
+    .online-marker {
+      background: #2196f3;
+      color: #fff;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+    }
+
+    .evaluation-btn {
+      background: #ff6b35;
+      color: #fff;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+    }
+
+    /* Modal styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(2px);
+    }
+
+    .modal.show {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* FeatureNudge tooltip styles */
+    .fnudge { 
+      position: absolute; 
+      max-width: 280px; 
+      background: #111; 
+      color: #fff; 
+      border-radius: 8px; 
+      padding: 10px 12px; 
+      box-shadow: 0 10px 20px rgba(0,0,0,.15); 
+      display: none; 
+      z-index: 9999; 
+    }
+    .fnudge--show { 
+      display: block; 
+    }
+    .fnudge__title { 
+      margin: 0 0 4px; 
+      font-size: 14px; 
+      font-weight: 800; 
+    }
+    .fnudge__body { 
+      margin: 0 0 8px; 
+      font-size: 12px; 
+      line-height: 1.4; 
+      color: #e5e7eb; 
+    }
+    .fnudge__actions { 
+      display: flex; 
+      gap: 8px; 
+    }
+    .fnudge__btn { 
+      border: 0; 
+      border-radius: 6px; 
+      padding: 6px 10px; 
+      font-size: 12px; 
+      cursor: pointer; 
+    }
+    .fnudge__btn--primary { 
+      background: #2196f3; 
+      color: #fff; 
+    }
+    .fnudge__btn--secondary { 
+      background: #e5e7eb; 
+      color: #111; 
+    }
+    .fnudge__arrow { 
+      position: absolute; 
+      width: 12px; 
+      height: 12px; 
+      background: #111; 
+      transform: rotate(45deg); 
+    }
   </style>
 </head>
 <body>
@@ -392,32 +1394,88 @@
 
   <!-- UPLOAD MODAL -->
   <div id="uploadModal" class="modal">
-    <div class="modal-content">
+    <div class="modal-content upload-modal-content">
+      <!-- Header -->
+      <div class="upload-modal-header">
+        <div class="upload-modal-icon">
+          <i data-lucide="file-check" class="upload-icon-svg"></i>
+        </div>
+        <div class="upload-modal-title">
+          <h2>Upload Student Notes</h2>
+        </div>
       <span class="close" onclick="closeUploadModal()">&times;</span>
-      <h3>Upload Student Notes</h3>
+      </div>
+      
+      <div class="upload-modal-divider"></div>
 
-      <label for="studentSearch">Search Student Folder</label>
-      <input type="text" id="studentSearch" />
+      <!-- Form panel -->
+      <div class="upload-modal-form">
+        <div class="upload-form-container">
+          <!-- Student Folder -->
+          <label for="studentSearch">Student Folder</label>
+          <div class="upload-input-container">
+            <i data-lucide="search" class="upload-input-icon"></i>
+            <input type="text" id="studentSearch" readonly />
+          </div>
 
       <input type="hidden" id="hiddenFolderName" />
 
+          <!-- Date -->
       <label for="date">Date</label>
+          <div class="upload-input-container">
+            <i data-lucide="calendar" class="upload-input-icon"></i>
       <input type="date" id="date" />
+          </div>
+        </div>
+      </div>
 
-      <button onclick="uploadPDF()">Upload PDF</button>
-      <button id="lessonNotesBtn" class="secondary">Lesson Notes</button>
-      <button id="lessonHistoryBtn" class="secondary">Lesson History</button>
+      <!-- Actions -->
+      <div class="upload-modal-actions">
+        <button onclick="uploadPDF()" class="upload-btn upload-btn-primary">
+          <i data-lucide="upload" class="upload-btn-icon"></i>
+          <span>Upload PDF</span>
+        </button>
+        <button id="lessonNotesBtn" onclick="openLessonNotes()" class="upload-btn upload-btn-secondary">
+          <i data-lucide="file-text" class="upload-btn-icon"></i>
+          <span>Lesson Notes</span>
+        </button>
+                    <button id="lessonHistoryBtn" onclick="openLessonHistory()" class="upload-btn upload-btn-primary">
+              <i data-lucide="sheet" class="upload-btn-icon"></i>
+              <span>Lesson History</span>
+            </button>
+      </div>
     </div>
   </div>
 
   <!-- SUCCESS MODAL -->
   <div id="successModal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeUploadModal()">&times;</span>
-      <h3 id="successMessage">PDF Uploaded!</h3>
-      <div id="successButtons">
-        <button onclick="goToLessonHistoryForm()">Add Lesson History</button>
-        <button class="secondary" onclick="returnToUploadForm()">Back</button>
+    <div class="modal-content success-modal-content">
+      <div class="success-modal-header">
+        <div class="success-modal-icon">
+          <i data-lucide="file-check" class="success-icon-svg"></i>
+      </div>
+        <div class="success-modal-title">
+          <h3 id="successMessage">PDF uploaded</h3>
+          <p id="successFileName" class="success-file-name"></p>
+        </div>
+        <span class="close" onclick="closeSuccessModal()">&times;</span>
+      </div>
+      
+      <div class="success-modal-divider"></div>
+
+      <div class="success-modal-body">
+        <p>What would you like to do with this note?</p>
+      </div>
+
+      <div id="successButtons" class="success-modal-actions">
+        <button onclick="goToLessonHistoryForm()" class="success-btn success-btn-primary">
+          <i data-lucide="sheet" class="success-btn-icon"></i>
+          <span>Add Lesson History</span>
+        </button>
+        <button onclick="handleAlreadyWritten()" class="success-btn success-btn-secondary">
+          <i data-lucide="check-line" class="success-btn-icon"></i>
+          <span>Already Written</span>
+        </button>
       </div>
     </div>
   </div>
@@ -458,20 +1516,353 @@
 
   <!-- Create Folder Modal -->
   <div id="createFolderModal" class="modal">
+    <div class="modal-content" style="max-width: 480px !important; width: 90% !important; padding: 0 !important; border-radius: 16px !important; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important; border: 1px solid rgba(0, 0, 0, 0.05) !important; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;">
+      <!-- Header -->
+      <div style="display: flex; align-items: center; gap: 12px; padding: 20px; padding-bottom: 12px;">
+        <div style="width: 40px; height: 40px; border-radius: 12px; border: 1px solid #d1fae5; background: #ecfdf5; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <i data-lucide="folder-plus" style="width: 20px; height: 20px; color: #059669;"></i>
+        </div>
+        <div style="flex: 1; min-width: 0;">
+          <h2 style="font-size: 18px; font-weight: 800; color: #059669; margin: 0; text-align: left; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;">Create Folder for Demo Lesson</h2>
+        </div>
+        <button onclick="closeCreateFolderModal()" style="margin-left: auto; padding: 8px; border-radius: 8px; color: #9ca3af; font-size: 20px; cursor: pointer; background: transparent; border: none;">
+          <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+        </button>
+      </div>
+      <div style="height: 1px; background: #e5e7eb; margin: 0 20px;"></div>
+
+      <!-- Body -->
+      <div style="padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+        <div id="studentNameDisplay" style="border: 1px solid #d1d5db; border-radius: 8px; padding: 12px; background: #f9fafb; font-weight: 600; text-align: center;">
+          <!-- Student name will be inserted here -->
+        </div>
+        <button id="openConfirmBtn" style="width: 100%; background: #059669; color: white; font-weight: 700; padding: 10px 16px; border-radius: 12px; display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 14px; border: none; cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.background='#047857'" onmouseout="this.style.background='#059669'">
+          <i data-lucide="folder-plus" style="width: 16px; height: 16px;"></i>
+          <span>Create Folder</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div id="confirmFolderModal" class="modal">
+    <div class="modal-content" style="max-width: 560px !important; width: 90% !important; padding: 0 !important; border-radius: 16px !important; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important; border: 1px solid rgba(0, 0, 0, 0.05) !important; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important; position: relative;">
+      <!-- Loading Overlay -->
+      <div id="confirmModalLoading" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.9); display: flex; align-items: center; justify-content: center; z-index: 10; display: none;">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+          <div style="width: 32px; height: 32px; border: 3px solid #e5e7eb; border-top: 3px solid #059669; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+          <span style="font-size: 14px; color: #6b7280; font-weight: 500;">Loading folder details...</span>
+        </div>
+      </div>
+      
+      <!-- Header -->
+      <div style="display: flex; align-items: center; gap: 12px; padding: 20px; padding-bottom: 12px;">
+        <div style="width: 40px; height: 40px; border-radius: 12px; border: 1px solid #d1fae5; background: #ecfdf5; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <i data-lucide="shield-check" style="width: 20px; height: 20px; color: #059669;"></i>
+        </div>
+        <div style="flex: 1; min-width: 0;">
+          <h3 style="font-size: 18px; font-weight: 800; color: #111827; margin: 0; text-align: left; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;">Confirm new folder details</h3>
+        </div>
+        <button onclick="closeConfirmFolderModal()" style="margin-left: auto; padding: 8px; border-radius: 8px; color: #9ca3af; font-size: 20px; cursor: pointer; background: transparent; border: none;">
+          <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+        </button>
+      </div>
+      <div style="height: 1px; background: #e5e7eb; margin: 0 20px;"></div>
+
+      <!-- Body -->
+      <div style="padding: 20px; display: flex; flex-direction: column; gap: 12px; font-size: 14px; color: #374151;">
+        <!-- Lesson type -->
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <i data-lucide="book-open" style="width: 16px; height: 16px; color: #6b7280;"></i>
+          <label for="confirmLessonType" style="font-weight: 600;">Lesson type</label>
+          <select id="confirmLessonType" style="margin-left: auto; border: 1px solid #d1d5db; border-radius: 8px; padding: 4px 8px; width: 240px; font-size: 14px;">
+            <option value="Regular" selected>Regular</option>
+            <option value="Kids">Kids</option>
+            <option value="Kids [Group]">Kids [Group]</option>
+            <option value="Group">Group</option>
+          </select>
+        </div>
+
+        <!-- Student number -->
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <i data-lucide="hash" style="width: 16px; height: 16px; color: #6b7280;"></i>
+          <label for="confirmStudentNumber" style="font-weight: 600;">Student number</label>
+          <input type="text" id="confirmStudentNumber" value="053" inputmode="numeric" autocomplete="off" style="margin-left: auto; border: 1px solid #d1d5db; border-radius: 8px; padding: 4px 8px; width: 240px; font-size: 14px;" />
+        </div>
+
+        <!-- Student name -->
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <i data-lucide="user" style="width: 16px; height: 16px; color: #6b7280;"></i>
+          <label for="confirmStudent" style="font-weight: 600;">Student</label>
+          <input type="text" id="confirmStudent" style="margin-left: auto; border: 1px solid #d1d5db; border-radius: 8px; padding: 4px 8px; width: 240px; font-size: 14px;" />
+        </div>
+
+        <!-- Number of students (conditional) -->
+        <div id="groupCountRow" style="display: flex; align-items: center; gap: 12px; display: none;">
+          <i data-lucide="users" style="width: 16px; height: 16px; color: #6b7280;"></i>
+          <label for="groupCount" style="font-weight: 600;">Number of students</label>
+          <input type="number" id="groupCount" min="2" max="4" step="1" value="2" style="margin-left: auto; border: 1px solid #d1d5db; border-radius: 8px; padding: 4px 8px; width: 240px; font-size: 14px;" />
+        </div>
+
+        <!-- Extra student inputs (auto-generated) -->
+        <div id="extraStudentsContainer" style="display: flex; flex-direction: column; gap: 8px; display: none;"></div>
+
+        <!-- Folder name (derived) -->
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <i data-lucide="folder" style="width: 16px; height: 16px; color: #6b7280;"></i>
+          <label for="confirmFolder" style="font-weight: 600;">Folder name</label>
+          <input type="text" id="confirmFolder" readonly style="margin-left: auto; border: 1px solid #d1d5db; border-radius: 8px; padding: 4px 8px; width: 240px; font-size: 14px;" />
+        </div>
+
+        <!-- Validation message -->
+        <p id="validationMsg" style="font-size: 12px; color: #dc2626; min-height: 20px; margin: 0;"></p>
+      </div>
+
+      <!-- Actions -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 20px 20px 20px;">
+        <button id="cancelConfirmBtn" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 12px; border: 1px solid #d1d5db; padding: 10px 16px; font-weight: 600; color: #374151; background: white; cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">
+          <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+          Cancel
+        </button>
+        <button id="confirmCreateBtn" disabled style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 12px; background: #059669; padding: 10px 16px; font-weight: 600; color: white; border: none; cursor: not-allowed; opacity: 0.6;">
+          <i data-lucide="check" style="width: 16px; height: 16px;"></i>
+          Confirm & Create
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Lesson Modal -->
+  <div id="editLessonModal" class="modal">
     <div class="modal-content">
-      <span class="close" onclick="closeCreateFolderModal()">&times;</span>
-      <h3>Create Folder for Demo Lesson</h3>
-      <p id="createFolderStudentName"></p>
-      <button id="createFolderBtn">Create Folder ==WIP== </button>
+      <span class="close" onclick="closeModal('editLessonModal')">&times;</span>
+      <h3 id="editLessonModalTitle">Lesson Details</h3>
+      <form id="editLessonForm" onsubmit="return false;">
+        <input type="hidden" id="eventID">
+        <label for="studentName">Student(s)</label>
+        <input type="text" id="studentName" readonly>
+        
+        <label for="folderName">Folder Name</label>
+        <input type="text" id="folderName" readonly>
+        
+        <div class="modal-buttons">
+            <button id="uploadPDFButton" type="button" class="secondary" onclick="uploadPDF()">
+              <i data-lucide="upload" class="btn-icon"></i>
+              Upload PDF
+            </button>
+            <a id="noteLinkButton" href="#" target="_blank" class="a-as-button secondary disabled">
+              <i data-lucide="file-text" class="btn-icon"></i>
+              Open Note
+            </a>
+            <a id="historyLinkButton" href="#" target="_blank" class="a-as-button secondary disabled">
+              <i data-lucide="sheet" class="btn-icon"></i>
+              Open History
+            </a>
+        </div>
+
+        <button type="button" class="secondary" onclick="closeModal('editLessonModal')">Close</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Evaluation Modal -->
+  <div id="evaluationModal" class="modal">
+    <div class="modal-content" style="max-width: 1000px;">
+      <span class="close" onclick="closeModal('evaluationModal')">&times;</span>
+      <h3>Student Evaluation</h3>
+      
+      <label for="evalStudentName">Student Name</label>
+      <input id="evalStudentName" type="text" readonly style="display:none;">
+      <select id="evalStudentDropdown" style="display:none;" onchange="onStudentDropdownChange()"></select>
+      
+      <div class="grid">
+        <div>
+          <label for="evalLevel">Level</label>
+          <input id="evalLevel" type="text">
+        </div>
+        <div>
+          <label for="evalTextbook">Textbook</label>
+          <input id="evalTextbook" type="text">
+        </div>
+      </div>
+
+      <h3>Scores</h3>
+      <table id="evalsTable" style="margin-bottom:16px;">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Grammar</th>
+            <th>Vocab</th>
+            <th>Speaking</th>
+            <th>Listening</th>
+            <th>Reading</th>
+            <th>Writing</th>
+            <th>Fluency</th>
+            <th>Self-study</th>
+          </tr>
+        </thead>
+        <tbody id="evalsBody">
+          <!-- Input row will be inserted here by JS -->
+        </tbody>
+      </table>
+
+      <button type="button" onclick="generateEvaluationPDF()">Generate PDF</button>
+    </div>
+  </div>
+
+  <!-- LESSON HISTORY SUCCESS MODAL -->
+  <div id="lessonHistorySuccessModal" class="modal">
+    <div class="modal-content success-modal-content">
+      <div class="success-modal-header">
+        <div class="success-modal-icon">
+          <svg class="success-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 11l3 3L22 4"/>
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+          </svg>
+        </div>
+        <div class="success-modal-title">
+          <h3 id="lessonHistorySuccessMessage">Lesson History Added!</h3>
+          <p id="lessonHistorySuccessDetails" class="success-file-name"></p>
+        </div>
+        <span class="close" onclick="closeLessonHistorySuccessModal()">&times;</span>
+      </div>
+      
+      <div class="success-modal-divider"></div>
+
+      <div class="success-modal-body">
+        <p>Lesson history has been successfully recorded.</p>
+      </div>
     </div>
   </div>
 
   <script>
+    // ================= FeatureNudge Tooltip Component =================
+    (function(){
+      class FeatureNudge{
+        constructor({ root=null, versionKey='feature_nudge_default' }={}){
+          this.root = root || document.body;      // bounding container
+          this.versionKey = versionKey;           // for one-time display logic
+          this.anchor = null;                     // HTMLElement anchor
+          this.placement = 'right';               // 'right'|'left'|'top'|'bottom'
+          this.el = this.#build();
+          this.root.appendChild(this.el);
+          this._onWindowChange = this._onWindowChange.bind(this);
+          window.addEventListener('resize', this._onWindowChange);
+          window.addEventListener('scroll', this._onWindowChange, { passive: true });
+        }
+        #build(){
+          const el = document.createElement('div');
+          el.className = 'fnudge';
+          el.innerHTML = `
+            <div class="fnudge__arrow" aria-hidden="true"></div>
+            <h4 class="fnudge__title"></h4>
+            <p class="fnudge__body"></p>
+            <div class="fnudge__actions"></div>
+          `;
+          return el;
+        }
+        setContent({ title='', body='', actions=[] }={}){
+          this.el.querySelector('.fnudge__title').textContent = title;
+          this.el.querySelector('.fnudge__body').textContent = body;
+          const wrap = this.el.querySelector('.fnudge__actions');
+          wrap.innerHTML = '';
+          actions.forEach(a => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'fnudge__btn ' + (a.variant==='secondary' ? 'fnudge__btn--secondary' : 'fnudge__btn--primary');
+            b.textContent = a.label || 'OK';
+            if (typeof a.onClick === 'function') b.addEventListener('click', a.onClick);
+            wrap.appendChild(b);
+          });
+          return this;
+        }
+        attachTo(el, placement='right'){
+          if (!el || !(el instanceof Element)) throw new Error('attachTo requires an Element');
+          this.anchor = el; this.placement = placement; this.position(); return this;
+        }
+        show(){ this.el.classList.add('fnudge--show'); this.position(); }
+        hide(){ this.el.classList.remove('fnudge--show'); }
+        position(offset=10){
+          if (!this.anchor) return;
+          const t = this.anchor.getBoundingClientRect();
+          const r = this.root.getBoundingClientRect();
+          // ensure measurable
+          this.el.classList.add('fnudge--show');
+          const w = this.el.offsetWidth, h = this.el.offsetHeight, arrow = this.el.querySelector('.fnudge__arrow');
+          let left, top;
+          if (this.placement === 'right') {
+            left = (t.right - r.left) + offset; top = (t.top - r.top) + t.height/2 - h/2;
+            Object.assign(arrow.style, { left: '-6px', top: (h/2-6)+'px', right: 'auto' });
+          } else if (this.placement === 'left') {
+            left = (t.left - r.left) - w - offset; top = (t.top - r.top) + t.height/2 - h/2;
+            Object.assign(arrow.style, { left: (w-6)+'px', top: (h/2-6)+'px', right: 'auto' });
+          } else if (this.placement === 'bottom') {
+            left = (t.left - r.left) + t.width/2 - w/2; top = (t.bottom - r.top) + offset;
+            Object.assign(arrow.style, { left: (w/2-6)+'px', top: '-6px', right: 'auto' });
+          } else { // top
+            left = (t.left - r.left) + t.width/2 - w/2; top = (t.top - r.top) - h - offset;
+            Object.assign(arrow.style, { left: (w/2-6)+'px', top: (h-6)+'px', right: 'auto' });
+          }
+          // clamp within root
+          const maxLeft = this.root.clientWidth - w - 8;
+          const maxTop  = this.root.clientHeight - h - 8;
+          left = Math.max(8, Math.min(left, maxLeft));
+          top  = Math.max(8, Math.min(top,  maxTop));
+          this.el.style.left = left + 'px';
+          this.el.style.top  = top + 'px';
+        }
+        // one‑time display helpers
+        seen(){ return localStorage.getItem(this.versionKey) === '1'; }
+        markSeen(){ localStorage.setItem(this.versionKey, '1'); }
+        reset(){ localStorage.removeItem(this.versionKey); }
+        _onWindowChange(){ if (this.el.classList.contains('fnudge--show')) this.position(); }
+        destroy(){ this.hide(); window.removeEventListener('resize', this._onWindowChange); window.removeEventListener('scroll', this._onWindowChange); this.el.remove(); }
+      }
+      window.FeatureNudge = FeatureNudge;
+    })();
+
     // Calendar configuration
     const CAL_START_HOUR = 10,
           CAL_END_HOUR   = 20,
           SLOT_HEIGHT    = 60,
           CARD_HEIGHT    = 50;
+    
+    // Helper functions for button loading states
+    function setButtonLoading(button, isLoading = true) {
+      if (isLoading) {
+        button.disabled = true;
+        button.classList.add('loading');
+        // Store original text
+        button.dataset.originalText = button.textContent || button.innerText;
+        button.textContent = 'Loading...';
+      } else {
+        button.disabled = false;
+        button.classList.remove('loading');
+        // Restore original text
+        if (button.dataset.originalText) {
+          button.textContent = button.dataset.originalText;
+          delete button.dataset.originalText;
+        }
+      }
+    }
+    
+    function setLinkButtonLoading(button, isLoading = true) {
+      if (isLoading) {
+        button.classList.add('loading');
+        button.style.pointerEvents = 'none';
+        // Store original text
+        button.dataset.originalText = button.textContent || button.innerText;
+        button.textContent = 'Loading...';
+      } else {
+        button.classList.remove('loading');
+        button.style.pointerEvents = '';
+        // Restore original text
+        if (button.dataset.originalText) {
+          button.textContent = button.dataset.originalText;
+          delete button.dataset.originalText;
+        }
+      }
+    }
   
     // On load: fetch event data, render once, then start polling statuses
     document.addEventListener('DOMContentLoaded', () => {
@@ -479,6 +1870,15 @@
       const titleEl = document.getElementById('dashboardTitle');
       const today = new Date();
       titleEl.textContent = String(today.getDate());
+
+      // Add click handlers to modal overlays to close modals when clicking outside
+      document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) {
+            modal.classList.remove('show');
+          }
+        });
+      });
 
       showLoading();
       google.script.run
@@ -508,6 +1908,33 @@
         })
         .getEventsJson();
     });
+  
+    // Function to refresh calendar data without page reload
+    function refreshCalendarData() {
+      showLoading();
+      google.script.run
+        .withSuccessHandler(events => {
+          hideLoading();
+          if (typeof events === 'string') {
+            try {
+              events = JSON.parse(events);
+            } catch (e) {
+              document.getElementById('eventsColumn').innerHTML =
+                '<p style="color:red">Error parsing data.</p>';
+              return;
+            }
+          }
+          pollLessonStatuses();
+          renderCalendarView(events);
+          renderCurrentTimeLine();
+        })
+        .withFailureHandler(err => {
+          hideLoading();
+          document.getElementById('eventsColumn').innerHTML =
+            `<p style="color:red">Error refreshing calendar: ${err.message}</p>`;
+        })
+        .getEventsJson();
+    }
   
     function showLoading() {
       document.getElementById('loading').classList.add('visible');
@@ -603,12 +2030,18 @@
         ).length + 1
       ));
   
+      // Track if we've found the first demo lesson for tooltip
+      let firstDemoLessonFound = false;
+      let firstDemoCard = null;
+  
       // Create each card, stamping endMin and blank flags
       placed.forEach(e => {
+        // Debug: Log event object and isOnline property
+        console.log('Event:', e.eventName, 'isOnline:', e.isOnline, e);
         const card = document.createElement('div');
         card.className = 'event-block';
         card.id = e.eventID;
-  
+
         // Position & size
         const topPx   = ((e.startMin - CAL_START_HOUR * 60) / 60) * SLOT_HEIGHT;
         const widthPx = Math.max(120, (ec.offsetWidth - 10) / maxCols - 8);
@@ -619,21 +2052,66 @@
           height: CARD_HEIGHT + 'px',
           zIndex: '2'
         });
-  
+
         // Stamp metadata for later polling
         card.dataset.endMin         = e.endMin;
         card.dataset.pdfUpload      = 'false';
         card.dataset.lessonHistory  = 'false';
-  
+
         // Initial styling (will update once flags arrive)
         updateSingleCardStatus(card);
-  
+
         // Card content
         card.innerHTML = `
           <div class="lesson-folder">${e.folderName}</div>
           <div class="lesson-date">${e.Start} – ${e.End}</div>
         `;
-  
+
+        // Add marker container for online and evaluation markers
+        const markerContainer = document.createElement('div');
+        markerContainer.className = 'marker-container';
+
+        // Add online marker if event is online
+        if (e.isOnline) {
+          const onlineDiv = document.createElement('div');
+          onlineDiv.className = 'online-marker';
+          onlineDiv.textContent = 'Online';
+          markerContainer.appendChild(onlineDiv);
+        }
+
+        // Add evaluation button if event has evaluationDue tag
+        if (e.evaluationDue) {
+          const evalBtn = document.createElement('button');
+          evalBtn.className = 'evaluation-btn';
+          evalBtn.textContent = 'Evaluation Due';
+          evalBtn.onclick = (event) => {
+            event.stopPropagation();
+            openEvaluationModal(e);
+          };
+          markerContainer.appendChild(evalBtn);
+        }
+
+        // Add teacher marker if teacher tag exists
+        if (e.teacher) {
+          const teacherDiv = document.createElement('div');
+          teacherDiv.className = 'teacher';
+          teacherDiv.textContent = e.teacher;
+          markerContainer.appendChild(teacherDiv);
+        }
+
+        // Only append the container if it has children
+        if (markerContainer.children.length > 0) {
+          card.appendChild(markerContainer);
+        }
+        
+        // Add evaluation ready indicator if event has evaluationReady tag
+        if (e.evaluationReady) {
+          const evalReady = document.createElement('div');
+          evalReady.className = 'evaluation-ready';
+          evalReady.textContent = 'Evaluation Ready';
+          card.appendChild(evalReady);
+        }
+
         // New: On click, open the correct modal
         card.onclick = () => {
           if (e.folderName && e.folderName.endsWith('DEMO')) {
@@ -642,12 +2120,58 @@
             openUploadModal(e.eventID, e.folderName);
           }
         };
-  
+
+        // Track first demo lesson for tooltip
+        if (!firstDemoLessonFound && e.folderName && e.folderName.endsWith('DEMO')) {
+          firstDemoLessonFound = true;
+          firstDemoCard = card;
+        }
+
         ec.appendChild(card);
       });
   
+      // Show tooltip for first demo lesson if not seen today
+      if (firstDemoCard) {
+        showDemoLessonTooltip(firstDemoCard);
+      }
+  
       // Draw the "now" line
       renderCurrentTimeLine();
+    }
+  
+    // Show tooltip for demo lesson (shows every time page is refreshed)
+    function showDemoLessonTooltip(card) {
+      // Create tooltip instance
+      const nudge = new FeatureNudge({ 
+        root: document.body, 
+        versionKey: 'demo_lesson_tooltip' 
+      });
+      
+      // Set tooltip content
+      nudge.setContent({
+        title: 'New: Create students directly',
+        body: 'You can now create new students directly from demo lessons. Click on any demo lesson to get started!',
+        actions: [
+          { 
+            label: 'Try it now', 
+            onClick: () => { 
+              nudge.hide(); 
+              // Trigger the demo lesson modal
+              card.click();
+            } 
+          },
+          { 
+            label: 'Dismiss', 
+            variant: 'secondary', 
+            onClick: () => { 
+              nudge.hide(); 
+            } 
+          }
+        ]
+      });
+      
+      // Attach to the demo lesson card and show
+      nudge.attachTo(card, 'right').show();
     }
   
     // Apply the correct CSS class based on current time & flags
@@ -711,17 +2235,37 @@
     }
 
     function closeUploadModal() {
-      // hide all modals
+      // hide upload modal only
       document.getElementById('uploadModal').classList.remove('show');
+    }
+
+    function closeSuccessModal() {
       document.getElementById('successModal').classList.remove('show');
     }
 
     // when upload succeeds:
     function showSuccessPage(message, hideButtons = false) {
+      // hide upload modal first
       closeUploadModal();
-      document.getElementById('successMessage').textContent = message;
+      // Always show "PDF uploaded" as heading (ignore server message)
+      document.getElementById('successMessage').textContent = "PDF uploaded";
+      
+      // Extract file name from server message if available, otherwise generate it
+      let fileName;
+      if (message && message.includes('PDF uploaded:')) {
+        fileName = message.replace('PDF uploaded:', '').trim();
+      } else {
+        // Generate file name as fallback
+        const folderName = document.getElementById('hiddenFolderName').value;
+        const date = document.getElementById('date').value;
+        fileName = `${folderName}'s Lesson Note ${date.replace(/-/g, '')}.pdf`;
+      }
+      document.getElementById('successFileName').textContent = fileName;
+      
+      // handle button visibility
       const btns = document.getElementById('successButtons');
-      if (btns) btns.style.display = hideButtons ? 'none' : '';
+      if (btns) btns.style.display = hideButtons ? 'none' : 'grid';
+      // show the success modal
       document.getElementById('successModal').classList.add('show');
     }
 
@@ -734,26 +2278,35 @@
     * Disables the button, shows spinner, calls server, then re-enables.
     */
     function uploadPDF() {
-      const folderName = document.getElementById('studentSearch').value;
-      const date       = document.getElementById('date').value;
+      // Check which modal we're in and get the appropriate values
+      let folderName, date, btn;
+      
+      if (document.getElementById('uploadModal').classList.contains('show')) {
+        // We're in the upload modal
+        folderName = document.getElementById('studentSearch').value;
+        date = document.getElementById('date').value;
+        btn = document.querySelector('#uploadModal button');
+      } else if (document.getElementById('editLessonModal').classList.contains('show')) {
+        // We're in the edit modal
+        folderName = document.getElementById('folderName').value;
+        date = new Date().toISOString().split('T')[0]; // Today's date
+        btn = document.getElementById('uploadPDFButton');
+      } else {
+        return alert("Please select a folder & date.");
+      }
 
       if (!folderName || !date) {
         return alert("Please select a folder & date.");
       }
 
-      // 1) Lock the button so they can't click again:
-      const btn = document.querySelector('#uploadModal button');
-      btn.disabled = true;
+      // 1) Lock the button and show loading state
+      setButtonLoading(btn, true);
 
-      // 2) Show the full-page spinner overlay:
-      showLoading();
-
-      // 3) Call server:
+      // 2) Call server:
       google.script.run
         .withSuccessHandler(resp => {
-          // a) Re-enable + hide spinner
-          btn.disabled = false;
-          hideLoading();
+          // a) Re-enable button
+          setButtonLoading(btn, false);
 
           // b) Update localStorage
           const all = JSON.parse(localStorage.getItem('dashboardStatuses') || '{}');
@@ -772,9 +2325,8 @@
           showSuccessPage(resp.message);
         })
         .withFailureHandler(err => {
-          // a) Re-enable + hide spinner
-          btn.disabled = false;
-          hideLoading();
+          // a) Re-enable button
+          setButtonLoading(btn, false);
           // b) Alert the error
           alert("Upload failed: " + err.message);
         })
@@ -803,13 +2355,14 @@
           .getTeacherList();
       }
 
+      // hide success modal and show history modal
+      closeSuccessModal();
       document.getElementById('historyModal').classList.add('show');
     }
 
     function submitLessonHistory(){
       const btn = document.getElementById('historySubmitBtn');
-      btn.disabled = true;
-      showLoading();
+      setButtonLoading(btn, true);
 
       // Grab ISO date ("YYYY-MM-DD")
       const iso = document.getElementById('date').value;
@@ -831,19 +2384,19 @@
 
       google.script.run
         .withSuccessHandler(resp=>{
-          btn.disabled = false;
-          hideLoading();
+          setButtonLoading(btn, false);
           if (resp.success) {
-            closeHistoryModal();
-            showSuccessPage(resp.message, true);
-
-            // 2) Update localStorage
+            // Get folder name and date for the success modal
+            const folderName = document.getElementById('hiddenFolderName').value;
+            const date = document.getElementById('date').value;
+            
+            // 1) Update localStorage
             const statuses = JSON.parse(localStorage.getItem('dashboardStatuses') || '{}');
             statuses[selectedEventID] = statuses[selectedEventID] || {};
             statuses[selectedEventID].lessonHistory = true;
             localStorage.setItem('dashboardStatuses', JSON.stringify(statuses));
 
-            // 3) Update the card's data-attributes and CSS
+            // 2) Update the card's data-attributes and CSS
             const card = document.getElementById(selectedEventID);
             if (card) {
               card.dataset.lessonHistory = 'true';
@@ -851,21 +2404,89 @@
               card.classList.remove('uploaded', 'history');
               card.classList.add('complete');
             }
+
+            // 3) Show the new lesson history success modal
+            showLessonHistorySuccessPage(folderName, date);
           } else {
             alert("Error: " + resp.message);
           }
         })
         .withFailureHandler(err=>{
-          btn.disabled = false;
-          hideLoading();
+          setButtonLoading(btn, false);
           alert("Error: "+err.message);
         })
         .addLessonHistoryEntry(data);
     }
 
     function returnToUploadForm() {
-      document.getElementById('successModal').classList.remove('show');
+      // hide success modal
+      closeSuccessModal();
+      // show upload modal
       document.getElementById('uploadModal').classList.add('show');
+    }
+
+    function openLessonNotes() {
+      const folderName = document.getElementById('hiddenFolderName').value;
+      if (!folderName) {
+        return alert('Please select a student folder first.');
+      }
+      
+      console.log('[LessonNotes] Using folderName:', folderName);
+      
+      // Get the button and set loading state
+      const btn = document.getElementById('lessonNotesBtn');
+      setButtonLoading(btn, true);
+      
+      // Get the lesson notes URL for this folder
+      google.script.run
+        .withSuccessHandler(links => {
+          setButtonLoading(btn, false);
+          console.log('[LessonNotes] getStudentLinks result:', links);
+          if (links && links.noteUrl) {
+            // Open the lesson notes URL in a new tab
+            window.open(links.noteUrl, '_blank');
+          } else {
+            alert('Lesson notes URL not found for this folder.');
+          }
+        })
+        .withFailureHandler(err => {
+          setButtonLoading(btn, false);
+          console.error('[LessonNotes] Error fetching lesson notes URL:', err);
+          alert('Error opening lesson notes: ' + err.message);
+        })
+        .getStudentLinks(folderName);
+    }
+
+    function openLessonHistory() {
+      const folderName = document.getElementById('hiddenFolderName').value;
+      if (!folderName) {
+        return alert('Please select a student folder first.');
+      }
+      
+      console.log('[LessonHistory] Using folderName:', folderName);
+      
+      // Get the button and set loading state
+      const btn = document.getElementById('lessonHistoryBtn');
+      setButtonLoading(btn, true);
+      
+      // Get the lesson history URL for this folder
+      google.script.run
+        .withSuccessHandler(links => {
+          setButtonLoading(btn, false);
+          console.log('[LessonHistory] getStudentLinks result:', links);
+          if (links && links.historyUrl) {
+            // Open the lesson history URL in a new tab
+            window.open(links.historyUrl, '_blank');
+          } else {
+            alert('Lesson history URL not found for this folder.');
+          }
+        })
+        .withFailureHandler(err => {
+          setButtonLoading(btn, false);
+          console.error('[LessonHistory] Error fetching lesson history URL:', err);
+          alert('Error opening lesson history: ' + err.message);
+        })
+        .getStudentLinks(folderName);
     }
 
     function createEventBlock(event) {
@@ -900,17 +2521,18 @@
         createFolderBtn.textContent = 'Create Folder';
         createFolderBtn.onclick = async (e) => {
           e.stopPropagation();
-          createFolderBtn.disabled = true;
-          createFolderBtn.textContent = 'Creating...';
+          setButtonLoading(createFolderBtn, true);
           try {
             const studentName = await google.script.run
               .withSuccessHandler((name) => {
                 return google.script.run
                   .withSuccessHandler((folderName) => {
+                    setButtonLoading(createFolderBtn, false);
                     createFolderBtn.textContent = 'Folder Created';
                     createFolderBtn.style.background = '#4CAF50';
                   })
                   .withFailureHandler((error) => {
+                    setButtonLoading(createFolderBtn, false);
                     createFolderBtn.textContent = 'Error';
                     createFolderBtn.style.background = '#F44336';
                     console.error('Error creating folder:', error);
@@ -918,12 +2540,14 @@
                   .createFoldersForStudents(studentName, [studentName]);
               })
               .withFailureHandler((error) => {
+                setButtonLoading(createFolderBtn, false);
                 createFolderBtn.textContent = 'Error';
                 createFolderBtn.style.background = '#F44336';
                 console.error('Error extracting student name:', error);
               })
               .extractStudentNameFromDemo(event.eventName);
           } catch (error) {
+            setButtonLoading(createFolderBtn, false);
             console.error('Error:', error);
             createFolderBtn.textContent = 'Error';
             createFolderBtn.style.background = '#F44336';
@@ -937,37 +2561,739 @@
 
     // Add JS for create folder modal
     function openCreateFolderModal(event) {
-      document.getElementById('createFolderStudentName').textContent = event.folderName.replace(' DEMO', '');
+      const studentName = event.folderName.replace(' DEMO', '');
+      document.getElementById('studentNameDisplay').textContent = studentName;
       document.getElementById('createFolderModal').classList.add('show');
-      document.getElementById('createFolderBtn').onclick = async () => {
-        const studentName = event.folderName.replace(' DEMO', '');
-        document.getElementById('createFolderBtn').disabled = true;
-        document.getElementById('createFolderBtn').textContent = 'Creating...';
-        try {
-          await google.script.run
-            .withSuccessHandler(() => {
-              document.getElementById('createFolderBtn').textContent = 'Folder Created';
-              document.getElementById('createFolderBtn').style.background = '#4CAF50';
-            })
-            .withFailureHandler((error) => {
-              document.getElementById('createFolderBtn').textContent = 'Error';
-              document.getElementById('createFolderBtn').style.background = '#F44336';
-              console.error('Error creating folder:', error);
-            })
-            .createFoldersForStudents(studentName, [studentName]);
-        } catch (error) {
-          console.error('Error:', error);
-          document.getElementById('createFolderBtn').textContent = 'Error';
-          document.getElementById('createFolderBtn').style.background = '#F44336';
-        }
+      
+      // Initialize Lucide icons for the new modal content
+      if (window.lucide && lucide.createIcons) {
+        lucide.createIcons();
+      }
+      
+      // Store event data for later use
+      window.currentDemoEvent = event;
+      
+      // Set up the "Create Folder" button to open confirmation modal
+      document.getElementById('openConfirmBtn').onclick = () => {
+        openConfirmFolderModal(event);
       };
     }
 
     function closeCreateFolderModal() {
       document.getElementById('createFolderModal').classList.remove('show');
-      document.getElementById('createFolderBtn').disabled = false;
-      document.getElementById('createFolderBtn').textContent = 'Create Folder';
-      document.getElementById('createFolderBtn').style.background = '';
+    }
+
+    // Confirmation modal functions
+    function openConfirmFolderModal(event) {
+      // Hide the first modal
+      document.getElementById('createFolderModal').classList.remove('show');
+      
+      // Show confirmation modal first
+      document.getElementById('confirmFolderModal').classList.add('show');
+      
+      // Show loading overlay
+      document.getElementById('confirmModalLoading').style.display = 'flex';
+      
+      // Parse student information from the event
+      const studentInfo = parseStudentInfoFromEvent(event);
+      
+      // Set up form fields with detected information
+      document.getElementById('confirmStudent').value = studentInfo.studentNames[0] || '';
+      document.getElementById('confirmStudentNumber').value = '053'; // Default value - will be updated
+      document.getElementById('confirmLessonType').value = studentInfo.lessonType;
+      document.getElementById('groupCount').value = studentInfo.studentNames.length.toString();
+      
+      // Get the next available student number for this lesson type
+      google.script.run
+        .withSuccessHandler((studentNumber) => {
+          document.getElementById('confirmStudentNumber').value = studentNumber;
+          syncFolder();
+          
+          // Run validation after data is loaded to enable the button
+          validateAll();
+          
+          // Hide loading overlay after data is loaded
+          document.getElementById('confirmModalLoading').style.display = 'none';
+        })
+        .withFailureHandler((error) => {
+          console.error('Error getting student number:', error);
+          // Keep default value
+          
+          // Run validation even on error
+          validateAll();
+          
+          // Hide loading overlay even on error
+          document.getElementById('confirmModalLoading').style.display = 'none';
+        })
+        .getNextStudentNumber(studentInfo.lessonType);
+      
+      // Initialize the form
+      updateGroupUI();
+      
+      // Populate additional student fields if it's a group
+      if (studentInfo.studentNames.length > 1) {
+        populateExtraStudentFields(studentInfo.studentNames);
+      }
+      
+      syncFolder();
+      
+      // Initialize Lucide icons for the new modal content
+      if (window.lucide && lucide.createIcons) {
+        lucide.createIcons();
+      }
+      
+      // Set up event listeners
+      setupConfirmationModalListeners();
+    }
+
+    // Parse student information from demo lesson event
+    function parseStudentInfoFromEvent(event) {
+      let studentNames = [];
+      let lessonType = 'Regular';
+      
+      // Extract student names from different possible sources
+      if (event.studentNames) {
+        // Remove "D/L" or "DEMO" and split by comma or "and"
+        const cleanStudentName = event.studentNames.replace(/\s*(?:D\/L|DEMO)\s*$/i, '').trim();
+        // Try splitting by "and" first, then by comma
+        if (/\s+and\s+/i.test(cleanStudentName)) {
+          studentNames = cleanStudentName.split(/\s+and\s+/i).map(name => name.trim()).filter(name => name);
+        } else {
+          studentNames = cleanStudentName.split(',').map(name => name.trim()).filter(name => name);
+        }
+      }
+      
+      // If no students found in studentName, try folderName
+      if (studentNames.length === 0 && event.folderName) {
+        const cleanFolderName = event.folderName.replace(/\s*DEMO\s*$/i, '').trim();
+        if (/\s+and\s+/i.test(cleanFolderName)) {
+          studentNames = cleanFolderName.split(/\s+and\s+/i).map(name => name.trim()).filter(name => name);
+        } else {
+          studentNames = cleanFolderName.split(',').map(name => name.trim()).filter(name => name);
+        }
+      }
+      
+      // If still no students, try eventName
+      if (studentNames.length === 0 && event.eventName) {
+        // Look for "and" pattern in event name
+        const andPattern = /\s+and\s+/i;
+        if (andPattern.test(event.eventName)) {
+          studentNames = event.eventName.split(andPattern).map(name => name.trim()).filter(name => name);
+        } else {
+          // Single student
+          studentNames = [event.eventName.replace(/\s*(?:D\/L|DEMO)\s*$/i, '').trim()];
+        }
+      }
+      
+      // Determine lesson type based on number of students
+      if (studentNames.length > 1) {
+        lessonType = 'Group';
+      } else if (studentNames.length === 1) {
+        // Check if it's a kids lesson (look for 子 character or "Kids" in the name)
+        if (event.eventName && (event.eventName.includes('子') || /kids/i.test(event.eventName))) {
+          lessonType = 'Kids';
+        } else {
+          lessonType = 'Regular';
+        }
+      }
+      
+      console.log('Parsed student info:', { studentNames, lessonType, event });
+      
+      // Debug: Log the parsing process
+      console.log('Parsing details:');
+      console.log('- event.studentNames:', event.studentNames);
+      console.log('- event.folderName:', event.folderName);
+      console.log('- event.eventName:', event.eventName);
+      console.log('- Final studentNames:', studentNames);
+      console.log('- Final lessonType:', lessonType);
+      
+      return { studentNames, lessonType };
+    }
+
+    // Populate extra student fields for group lessons
+    function populateExtraStudentFields(studentNames) {
+      // First, make sure we have the right number of student inputs
+      const total = studentNames.length;
+      document.getElementById('groupCount').value = total.toString();
+      
+      // For group lessons, put all names in the first field separated by "and"
+      if (studentNames.length > 1) {
+        document.getElementById('confirmStudent').value = studentNames.join(' and ');
+        // Hide the extra student fields since we're putting everything in the first field
+        document.getElementById('extraStudentsContainer').classList.add('hidden');
+      } else {
+        document.getElementById('confirmStudent').value = studentNames[0] || '';
+        renderExtraStudentInputs();
+      }
+      
+      // Trigger validation after populating
+      setTimeout(() => {
+        validateAll();
+      }, 0);
+    }
+
+    function closeConfirmFolderModal() {
+      document.getElementById('confirmFolderModal').classList.remove('show');
+      // Hide loading overlay when modal is closed
+      document.getElementById('confirmModalLoading').style.display = 'none';
+    }
+
+    function setupConfirmationModalListeners() {
+      // Lesson type change
+      document.getElementById('confirmLessonType').addEventListener('change', updateGroupUI);
+      
+      // Student number and name input
+      document.getElementById('confirmStudentNumber').addEventListener('input', syncFolder);
+      document.getElementById('confirmStudent').addEventListener('input', syncFolder);
+      
+      // Group count change
+      document.getElementById('groupCount').addEventListener('input', () => {
+        renderExtraStudentInputs();
+      });
+      
+      // Cancel button
+      document.getElementById('cancelConfirmBtn').addEventListener('click', closeConfirmFolderModal);
+      
+      // Confirm button
+      document.getElementById('confirmCreateBtn').addEventListener('click', handleConfirmCreate);
+    }
+
+    // Folder naming logic
+    const PREFIX = {
+      'Regular': '0',
+      'Kids': 'K',
+      'Kids [Group]': 'K',
+      'Group': 'M'
+    };
+
+    function isGroupType(type) {
+      return type === 'Group' || type === 'Kids [Group]';
+    }
+
+    function pad3(v) {
+      const s = String(v || '').replace(/\D/g, '');
+      return s.padStart(3, '0').slice(-3);
+    }
+
+    function buildFolderName() {
+      const type = document.getElementById('confirmLessonType').value;
+      const prefix = PREFIX[type] || '';
+      const num = pad3(document.getElementById('confirmStudentNumber').value || '053');
+      const name = (document.getElementById('confirmStudent').value || '').trim();
+      return `${prefix}${num} ${name}`.trim();
+    }
+
+    function syncFolder() {
+      document.getElementById('confirmFolder').value = buildFolderName();
+      validateAll();
+    }
+
+    function updateGroupUI() {
+      const type = document.getElementById('confirmLessonType').value;
+      const showGroup = isGroupType(type);
+
+      document.getElementById('groupCountRow').classList.toggle('hidden', !showGroup);
+      
+      // For group lessons, we don't show extra student fields since we put everything in the first field
+      if (showGroup) {
+        document.getElementById('extraStudentsContainer').classList.add('hidden');
+      } else {
+        document.getElementById('extraStudentsContainer').classList.add('hidden');
+        document.getElementById('extraStudentsContainer').innerHTML = '';
+      }
+
+      // Update student number when lesson type changes
+      google.script.run
+        .withSuccessHandler((studentNumber) => {
+          document.getElementById('confirmStudentNumber').value = studentNumber;
+          syncFolder();
+        })
+        .withFailureHandler((error) => {
+          console.error('Error getting student number:', error);
+        })
+        .getNextStudentNumber(type);
+    }
+
+    function renderExtraStudentInputs() {
+      const total = Number(document.getElementById('groupCount').value || 2);
+      const extras = Math.max(0, Math.min(4, total) - 1);
+      const container = document.getElementById('extraStudentsContainer');
+      container.innerHTML = '';
+
+      for (let i = 2; i <= extras + 1; i++) {
+        const row = document.createElement('div');
+        row.className = 'flex items-center gap-3';
+        row.innerHTML = `
+          <svg class="success-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="m22 21-2-2"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          <label for="student${i}" class="font-semibold">Student ${i}</label>
+          <input type="text" id="student${i}" class="ml-auto border border-gray-300 rounded-lg px-2 py-1 w-60" placeholder="Enter name" />
+        `;
+        container.appendChild(row);
+      }
+      
+      // Add event listeners to the new inputs for real-time validation
+      for (let i = 2; i <= extras + 1; i++) {
+        const input = document.getElementById(`student${i}`);
+        if (input) {
+          input.addEventListener('input', validateAll);
+        }
+      }
+      
+      validateAll();
+    }
+
+    function validateAll() {
+      const type = document.getElementById('confirmLessonType').value;
+      const numberClean = document.getElementById('confirmStudentNumber').value.replace(/\D/g, '');
+      const name1 = (document.getElementById('confirmStudent').value || '').trim();
+      const confirmBtn = document.getElementById('confirmCreateBtn');
+      const validationMsg = document.getElementById('validationMsg');
+
+      if (!numberClean) {
+        return setValidation(false, 'Student number is required (digits only).');
+      }
+      if (numberClean.length === 0 || Number.isNaN(Number(numberClean))) {
+        return setValidation(false, 'Student number must be numeric.');
+      }
+      if (!name1) {
+        return setValidation(false, 'Student 1 name is required.');
+      }
+
+      if (isGroupType(type)) {
+        const total = Number(document.getElementById('groupCount').value || 2);
+        if (total < 2 || total > 4) {
+          return setValidation(false, 'Number of students must be between 2 and 4.');
+        }
+        
+        // Check if the first student field contains multiple names (separated by "and")
+        const firstStudentValue = name1;
+        if (/\s+and\s+/i.test(firstStudentValue)) {
+          // Split the first student field and check if we have enough names
+          const names = firstStudentValue.split(/\s+and\s+/i).map(n => n.trim()).filter(n => n);
+          if (names.length < total) {
+            return setValidation(false, `Need ${total} student names. Found ${names.length} in the first field.`);
+          }
+        } else {
+          // Check individual student fields
+          for (let i = 2; i <= total; i++) {
+            const el = document.getElementById(`student${i}`);
+            const val = (el && el.value || '').trim();
+            if (!val) {
+              return setValidation(false, `Student ${i} name is required.`);
+            }
+          }
+        }
+      }
+
+      return setValidation(true, '');
+    }
+
+    function setValidation(ok, msg) {
+      const validationMsg = document.getElementById('validationMsg');
+      const confirmBtn = document.getElementById('confirmCreateBtn');
+      
+      validationMsg.textContent = msg || '';
+      confirmBtn.disabled = !ok;
+      
+      if (ok) {
+        confirmBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+        // Also update inline styles directly
+        confirmBtn.style.cursor = 'pointer';
+        confirmBtn.style.opacity = '1';
+      } else {
+        confirmBtn.classList.add('opacity-60', 'cursor-not-allowed');
+        // Also update inline styles directly
+        confirmBtn.style.cursor = 'not-allowed';
+        confirmBtn.style.opacity = '0.6';
+      }
+      
+      return { ok, msg };
+    }
+
+    function collectStudentNames() {
+      const firstStudentValue = (document.getElementById('confirmStudent').value || '').trim();
+      let names = [];
+      
+      // Check if the first student field contains multiple names (separated by "and")
+      if (/\s+and\s+/i.test(firstStudentValue)) {
+        names = firstStudentValue.split(/\s+and\s+/i).map(n => n.trim()).filter(n => n);
+      } else {
+        names = [firstStudentValue];
+        
+        // Add additional student names from separate fields
+        if (isGroupType(document.getElementById('confirmLessonType').value)) {
+          const total = Number(document.getElementById('groupCount').value || 2);
+          for (let i = 2; i <= total; i++) {
+            const el = document.getElementById(`student${i}`);
+            if (el) names.push((el.value || '').trim());
+          }
+        }
+      }
+      
+      return names.filter(name => name); // Remove empty names
+    }
+
+    function handleConfirmCreate() {
+      const btn = document.getElementById('confirmCreateBtn');
+      setButtonLoading(btn, true);
+      
+      const payload = {
+        lessonType: document.getElementById('confirmLessonType').value,
+        studentNumber: pad3(document.getElementById('confirmStudentNumber').value),
+        studentNames: collectStudentNames(),
+        folderName: document.getElementById('confirmFolder').value.trim(),
+        eventID: window.currentDemoEvent.eventID
+      };
+
+      google.script.run
+        .withSuccessHandler((result) => {
+          setButtonLoading(btn, false);
+          console.log('Folder created successfully:', result);
+          closeConfirmFolderModal();
+          closeAllModals();
+          // Refresh the calendar data without reloading the page
+          refreshCalendarData();
+        })
+        .withFailureHandler((error) => {
+          setButtonLoading(btn, false);
+          console.error('Error creating folder:', error);
+          alert('Error creating folder: ' + error.message);
+        })
+        .createDemoLessonFolderWithDetails(payload);
+    }
+
+    // --- APP ---
+
+    function showEditModal(eventData) {
+      document.getElementById('eventID').value = eventData.eventID;
+      document.getElementById('editLessonModalTitle').textContent = eventData.eventName;
+      document.getElementById('studentName').value = eventData.studentName;
+      document.getElementById('folderName').value = eventData.folderName;
+
+      // Reset and disable link buttons initially
+      const noteBtn = document.getElementById('noteLinkButton');
+      const historyBtn = document.getElementById('historyLinkButton');
+      noteBtn.href = '#';
+      historyBtn.href = '#';
+      noteBtn.classList.add('disabled');
+      historyBtn.classList.add('disabled');
+      
+      // Fetch links for the folder
+      const folderName = eventData.folderName;
+      if (folderName) {
+        google.script.run
+          .withSuccessHandler(updateLinkButtons)
+          .withFailureHandler(onLinkFetchError)
+          .getStudentLinks(folderName);
+      }
+
+      openModal('editLessonModal');
+    }
+
+    function updateLinkButtons(links) {
+        const noteBtn = document.getElementById('noteLinkButton');
+        const historyBtn = document.getElementById('historyLinkButton');
+
+        if (links && !links.error) {
+            if (links.noteUrl) {
+                noteBtn.href = links.noteUrl;
+                noteBtn.classList.remove('disabled');
+                // Add click handler with loading state
+                noteBtn.onclick = function(e) {
+                    setLinkButtonLoading(noteBtn, true);
+                    // The link will open in a new tab, so we need to reset the loading state after a short delay
+                    setTimeout(() => {
+                        setLinkButtonLoading(noteBtn, false);
+                    }, 1000);
+                };
+            }
+            if (links.historyUrl) {
+                historyBtn.href = links.historyUrl;
+                historyBtn.classList.remove('disabled');
+                // Add click handler with loading state
+                historyBtn.onclick = function(e) {
+                    setLinkButtonLoading(historyBtn, true);
+                    // The link will open in a new tab, so we need to reset the loading state after a short delay
+                    setTimeout(() => {
+                        setLinkButtonLoading(historyBtn, false);
+                    }, 1000);
+                };
+            }
+        } else if (links && links.error) {
+            console.error("Error fetching links:", links.error);
+        } else {
+             console.log("No links returned for student.");
+        }
+    }
+
+    function onLinkFetchError(err) {
+        console.error("Failed to call getStudentLinks:", err.message);
+        // Keep buttons disabled
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.remove('show');
+    }
+
+    // General function to close all modals
+    function closeAllModals() {
+      document.querySelectorAll('.modal').forEach(modal => {
+        modal.classList.remove('show');
+      });
+    }
+
+    // Evaluation Functions
+    function openEvaluationModal(eventData) {
+      const folderName = eventData.folderName || '';
+      const evalInput = document.getElementById('evalStudentName');
+      const evalDropdown = document.getElementById('evalStudentDropdown');
+      // Fetch student names from server by folderName
+      google.script.run
+        .withSuccessHandler(function(names) {
+          if (Array.isArray(names) && names.length > 1) {
+            evalInput.style.display = 'none';
+            evalDropdown.style.display = '';
+            evalDropdown.innerHTML = '';
+            names.forEach(name => {
+              const opt = document.createElement('option');
+              opt.value = name;
+              opt.textContent = name;
+              evalDropdown.appendChild(opt);
+            });
+            // Load evaluations for the first student in dropdown
+            if (names.length > 0) {
+              loadStudentEvaluations(names[0]);
+            }
+          } else {
+            evalDropdown.style.display = 'none';
+            evalInput.style.display = '';
+            evalInput.value = names && names.length === 1 ? names[0] : '';
+            // Load previous evaluations for the single student
+            const studentName = names && names.length === 1 ? names[0] : '';
+            if (studentName) {
+              loadStudentEvaluations(studentName);
+            }
+          }
+          document.getElementById('evaluationModal').classList.add('show');
+        })
+        .withFailureHandler(function(e) {
+          alert('Could not fetch student names: ' + e.message);
+        })
+        .getStudentNamesByFolder(folderName);
+    }
+
+    function loadStudentEvaluations(studentName) {
+      google.script.run
+        .withSuccessHandler(function(evaluations) {
+          renderEvaluationTable(evaluations);
+        })
+        .withFailureHandler(function(e) {
+          console.error('Could not fetch evaluations: ' + e.message);
+          renderEvaluationTable([]);
+        })
+        .getStudentEvaluations(studentName);
+    }
+
+    function renderEvaluationTable(evaluations) {
+      const tbody = document.getElementById('evalsBody');
+      tbody.innerHTML = '';
+      
+      // Add previous evaluation rows
+      evaluations.forEach(eval => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${eval.evaluationDate}</td>
+          <td>${eval.grammar}</td>
+          <td>${eval.vocabulary}</td>
+          <td>${eval.speaking}</td>
+          <td>${eval.listening}</td>
+          <td>${eval.reading}</td>
+          <td>${eval.writing}</td>
+          <td>${eval.fluency}</td>
+          <td>${eval.selfStudy}</td>
+        `;
+        tbody.appendChild(row);
+      });
+      
+      // Add input row at the bottom
+      renderEvalInputRow();
+    }
+
+    function renderEvalInputRow() {
+      const tbody = document.getElementById('evalsBody');
+      tbody.innerHTML = '';
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td><input type="date" id="evalDate"></td>
+        <td><input type="number" id="evalGrammar" step="0.5"></td>
+        <td><input type="number" id="evalVocab" step="0.5"></td>
+        <td><input type="number" id="evalSpeaking" step="0.5"></td>
+        <td><input type="number" id="evalListening" step="0.5"></td>
+        <td><input type="number" id="evalReading" step="0.5"></td>
+        <td><input type="number" id="evalWriting" step="0.5"></td>
+        <td><input type="number" id="evalFluency" step="0.5"></td>
+        <td><input type="number" id="evalSelf" step="0.5"></td>
+      `;
+      tbody.appendChild(row);
+    }
+
+    function generateEvaluationPDF() {
+      const data = {
+        studentName: document.getElementById('evalStudentName').value || document.getElementById('evalStudentDropdown').value,
+        level:       document.getElementById('evalLevel').value,
+        textbook:    document.getElementById('evalTextbook').value,
+        evals: []
+      };
+      // Only one row, so just read from the input fields
+      data.evals.push({
+        date:    document.getElementById('evalDate').value,
+        grammar: document.getElementById('evalGrammar').value,
+        vocab:   document.getElementById('evalVocab').value,
+        speak:   document.getElementById('evalSpeaking').value,
+        listen:  document.getElementById('evalListening').value,
+        read:    document.getElementById('evalReading').value,
+        write:   document.getElementById('evalWriting').value,
+        fluency: document.getElementById('evalFluency').value,
+        self:    document.getElementById('evalSelf').value
+      });
+      
+      // Get the button and set loading state
+      const btn = document.querySelector('#evaluationModal button');
+      setButtonLoading(btn, true);
+      
+      google.script.run
+        .withSuccessHandler(url => {
+          setButtonLoading(btn, false);
+          if (url) {
+            window.open(url, '_blank');
+            closeModal('evaluationModal');
+          } else {
+            alert('Error generating PDF');
+          }
+        })
+        .withFailureHandler(err => {
+          setButtonLoading(btn, false);
+          alert('Error generating PDF: ' + err.message);
+        })
+        .generateEvaluationPDF(data);
+    }
+
+    // Handle student dropdown change
+    function onStudentDropdownChange() {
+      const dropdown = document.getElementById('evalStudentDropdown');
+      const selectedStudent = dropdown.value;
+      if (selectedStudent) {
+        loadStudentEvaluations(selectedStudent);
+      }
+    }
+    
+    // Initialize Lucide icons
+    lucide.createIcons();
+
+    // Function to show lesson history success modal
+    function showLessonHistorySuccessPage(folderName, date) {
+      // Hide history modal first
+      closeHistoryModal();
+      
+      // Set the success message
+      document.getElementById('lessonHistorySuccessMessage').textContent = "Lesson History Added!";
+      
+      // Set the details (folder name and date)
+      const details = `${folderName} - ${date}`;
+      document.getElementById('lessonHistorySuccessDetails').textContent = details;
+      
+      // Show the lesson history success modal
+      document.getElementById('lessonHistorySuccessModal').classList.add('show');
+      
+      // Auto-close after 2 seconds
+      setTimeout(() => {
+        closeLessonHistorySuccessModal();
+      }, 2000);
+    }
+
+    // Function to close lesson history success modal
+    function closeLessonHistorySuccessModal() {
+      document.getElementById('lessonHistorySuccessModal').classList.remove('show');
+    }
+
+    // Function specifically for the "Already Written" button - only runs when clicked
+    function handleAlreadyWritten() {
+      console.log('handleAlreadyWritten called');
+      console.log('selectedEventID:', selectedEventID);
+      
+      // Get the button and set loading state
+      const btn = document.querySelector('#successButtons .success-btn-secondary');
+      console.log('Button found:', btn);
+      
+      if (!btn) {
+        console.error('Button not found!');
+        return;
+      }
+      
+      setButtonLoading(btn, true);
+      
+      // Check database state first
+      google.script.run
+        .withSuccessHandler(resp => {
+          console.log('Database response:', resp);
+          setButtonLoading(btn, false);
+          
+          // Find the specific event status from the array
+          const eventStatus = resp.find(status => status.eventID === selectedEventID);
+          console.log('Event status found:', eventStatus);
+          
+          // Check if lesson history is already set to true
+          if (eventStatus && eventStatus.lessonHistory === true) {
+            console.log('Lesson history already set, closing modals');
+            // Lesson history is already set, just close all modals
+            closeAllModals();
+            return;
+          }
+          
+          console.log('Lesson history not set, marking as true...');
+          // If not set, mark it as true
+          google.script.run
+            .withSuccessHandler(markResp => {
+              console.log('Mark lesson history success:', markResp);
+              setButtonLoading(btn, false);
+              
+              // Update localStorage
+              const statuses = JSON.parse(localStorage.getItem('dashboardStatuses') || '{}');
+              statuses[selectedEventID] = statuses[selectedEventID] || {};
+              statuses[selectedEventID].lessonHistory = true;
+              localStorage.setItem('dashboardStatuses', JSON.stringify(statuses));
+              
+              // Update the card's data-attributes and CSS immediately
+              const card = document.getElementById(selectedEventID);
+              console.log('Card found:', card);
+              if (card) {
+                card.dataset.lessonHistory = 'true';
+                updateSingleCardStatus(card);
+                card.classList.remove('uploaded', 'history');
+                card.classList.add('complete');
+              }
+              
+              // Close all modals and show calendar bare
+              closeAllModals();
+            })
+            .withFailureHandler(err => {
+              console.error('Error marking lesson history:', err);
+              setButtonLoading(btn, false);
+              alert('Error marking lesson history: ' + err.message);
+            })
+            .markLessonHistory(selectedEventID, true);
+        })
+        .withFailureHandler(err => {
+          console.error('Error checking lesson history status:', err);
+          setButtonLoading(btn, false);
+          alert('Error checking lesson history status: ' + err.message);
+        })
+        .getLessonsTodayStatuses();
     }
   </script>
 </body>

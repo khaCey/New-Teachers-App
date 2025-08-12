@@ -176,3 +176,99 @@ function formatStudentNames(students) {
   if (students.length === 2) return students[0] + ' and ' + students[1];
   return students.slice(0, -1).join(', ') + ', and ' + students[students.length - 1];
 }
+
+/**
+ * Generates a PDF evaluation document for a student
+ * @param {Object} data - The evaluation data
+ * @returns {string} The URL of the generated PDF
+ */
+function generateEvaluationPDF(data) {
+  try {
+    // Find the student's folder
+    const studentName = data.studentName;
+    const parentFolder = findStudentFolder(studentName);
+    if (!parentFolder) throw new Error(`Folder for "${studentName}" not found.`);
+
+    // Find or create evaluation folder
+    const evaluationFolder = findFolderInFolder(parentFolder, `${studentName}'s Evaluation`);
+    if (!evaluationFolder) throw new Error(`Evaluation folder not found for "${studentName}"`);
+
+    // Create evaluation document content
+    const content = createEvaluationContent(data);
+    
+    // Create a new Google Doc with the evaluation content
+    const doc = DocumentApp.create(`${studentName} Evaluation ${new Date().toLocaleDateString()}`);
+    const body = doc.getBody();
+    
+    // Clear default content and add our evaluation
+    body.clear();
+    body.appendParagraph(content);
+    
+    // Convert to PDF
+    const pdfBlob = doc.getAs('application/pdf');
+    const pdfFile = evaluationFolder.createFile(pdfBlob);
+    
+    // Clean up the temporary document
+    DriveApp.getFileById(doc.getId()).setTrashed(true);
+    
+    return pdfFile.getUrl();
+  } catch (error) {
+    Logger.log('Error generating evaluation PDF: ' + error.message);
+    throw error;
+  }
+}
+
+/**
+ * Creates the content for the evaluation document
+ * @param {Object} data - The evaluation data
+ * @returns {string} The formatted evaluation content
+ */
+function createEvaluationContent(data) {
+  let content = `STUDENT EVALUATION\n\n`;
+  content += `Student Name: ${data.studentName}\n`;
+  content += `Level: ${data.level}\n`;
+  content += `Textbook: ${data.textbook}\n\n`;
+  
+  content += `SCORES\n`;
+  if (data.evals && data.evals.length > 0) {
+    data.evals.forEach((eval, index) => {
+      content += `Date: ${eval.date}\n`;
+      content += `Grammar: ${eval.grammar}, Vocab: ${eval.vocab}, Speaking: ${eval.speak}\n`;
+      content += `Listening: ${eval.listen}, Reading: ${eval.read}, Writing: ${eval.write}\n`;
+      content += `Fluency: ${eval.fluency}, Self-study: ${eval.self}\n\n`;
+    });
+  } else {
+    content += `No scores recorded.\n\n`;
+  }
+  
+  return content;
+}
+
+/**
+ * Given a folderName, returns all student names from the Student List sheet that match it.
+ * @param {string} folderName
+ * @returns {string[]} Array of student names
+ */
+function getStudentNamesByFolder(folderName) {
+  if (!folderName) return [];
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Student List');
+  if (!sheet) return [];
+  const data = sheet.getDataRange().getValues();
+  // Column C: Student Name (index 2), Column D: Student Folder (index 3)
+  const NAME_COL_IDX = 2;
+  const FOLDER_COL_IDX = 3;
+  const names = [];
+  Logger.log('Searching for folderName: "' + folderName + '" (length: ' + folderName.length + ')');
+  for (let i = 1; i < data.length; i++) {
+    const rowFolder = data[i][FOLDER_COL_IDX] ? data[i][FOLDER_COL_IDX].toString().trim() : '';
+    Logger.log('Row ' + i + ': "' + rowFolder + '" (length: ' + rowFolder.length + ')');
+    if (rowFolder === folderName.trim()) {
+      Logger.log('MATCH: ' + rowFolder + ' == ' + folderName.trim());
+      names.push(data[i][NAME_COL_IDX]);
+    }
+  }
+  Logger.log('Found names: ' + JSON.stringify(names));
+  // Return unique names only
+  return Array.from(new Set(names));
+}

@@ -44,7 +44,7 @@ function getEventsJson() {
 }
 
 /**
- * Returns an array of { eventID, pdfUpload, lessonHistory } 
+ * Returns an array of { eventID, pdfUpload, lessonHistory, folderName } 
  * for every row in the `lessons_today` sheet.
  */
 function getLessonsTodayStatuses() {
@@ -62,6 +62,7 @@ function getLessonsTodayStatuses() {
   const idxID   = headers.indexOf('eventID');
   const idxPDF  = headers.indexOf('pdfUpload');
   const idxLH   = headers.indexOf('lessonHistory');
+  const idxFolder = headers.indexOf('folderName');
   if (idxID < 0 || idxPDF < 0 || idxLH < 0) {
     throw new Error('Missing one of eventID, pdfUpload or lessonHistory headers.');
   }
@@ -74,7 +75,8 @@ function getLessonsTodayStatuses() {
     return {
       eventID:       String(row[idxID]),
       pdfUpload:     pdf,
-      lessonHistory: lh
+      lessonHistory: lh,
+      folderName:    idxFolder >= 0 ? String(row[idxFolder] || '') : ''
     };
   });
 }
@@ -92,6 +94,26 @@ function markPdfUploaded(eventID, flag) {
   for (let r = 0; r < data.length; r++) {
     if (data[r][ hdrs.indexOf('eventID') ] === eventID) {
       sht.getRange(r+2, hdrs.indexOf('pdfUpload')+1)
+         .setValue(flag ? 'TRUE' : 'FALSE');
+      return { success: true };
+    }
+  }
+  throw new Error("EventID not found in lessons_today: " + eventID);
+}
+
+/**
+ * Marks the given event row in `lessons_today` as having had its lesson history recorded.
+ */
+function markLessonHistory(eventID, flag) {
+  const ss   = SpreadsheetApp.getActiveSpreadsheet();
+  const sht  = ss.getSheetByName('lessons_today');
+  const data = sht.getDataRange().getValues();
+  const hdrs = data.shift();
+
+  // find the row matching eventID
+  for (let r = 0; r < data.length; r++) {
+    if (data[r][ hdrs.indexOf('eventID') ] === eventID) {
+      sht.getRange(r+2, hdrs.indexOf('lessonHistory')+1)
          .setValue(flag ? 'TRUE' : 'FALSE');
       return { success: true };
     }
@@ -145,7 +167,8 @@ function fetchAndCacheTodayLessons(dateOverride) {
     existingStatuses.forEach(status => {
       oldStatusMap[status.eventID] = {
         pdfUpload: status.pdfUpload,
-        lessonHistory: status.lessonHistory
+        lessonHistory: status.lessonHistory,
+        folderName: status.folderName // Preserve folderName
       };
     });
     Logger.log('Loaded %s existing statuses', existingStatuses.length);
@@ -209,30 +232,81 @@ function fetchAndCacheTodayLessons(dateOverride) {
     const namePart = title.split('(')[0].replace(/子/g, '');
     const names = namePart.split(/\s+and\s+/i).map(n => n.trim()).filter(Boolean);
 
-    let lastName = '';
-    if (names.length > 1) {
-      const lp = names[names.length - 1].split(/\s+/);
-      if (lp.length > 1) lastName = lp.pop();
+    // Clean D/L markers from names BEFORE processing shared last names
+    const cleanNames = names.map(nm => {
+      return nm.replace(/\s*D\/L\s*/i, '').trim();
+    });
+
+    // Check for evaluation tags in description
+    const description = event.getDescription() || '';
+    const hasEvaluationReady = description.includes('#evaluationReady');
+    const hasEvaluationDue = description.includes('#evaluationDue');
+    const teacherMatch = description.match(/#teacher(\w+)/i);
+    const teacher = teacherMatch ? teacherMatch[1] : '';
+    
+    // Change event color based on evaluation tags
+    if (hasEvaluationReady) {
+      changeEventColor(event.getId(), 'green');
+    } else if (hasEvaluationDue) {
+      changeEventColor(event.getId(), 'red');
     }
 
-    names.forEach(nm => {
-      const parts = nm.split(/\s+/);
-      const fullName = (parts.length > 1) ? nm : (parts[0] + (lastName ? ' ' + lastName : ''));
-      let folderName = studentMap[ fullName.trim() ] || '';
-      if (/D\/L/i.test(title) && !folderName) {
-        const demoStudentName = extractStudentNameFromDemo(title);
-        folderName = demoStudentName + ' DEMO';
-        Logger.log('Demo lesson with no folder: event "%s", using folderName "%s"', title, folderName);
+    // Improved last name detection for students with same last name
+    let sharedLastName = '';
+    if (cleanNames.length > 1) {
+      // Check if first student has only one word (first name only)
+      const firstStudentParts = cleanNames[0].split(/\s+/);
+      if (firstStudentParts.length === 1) {
+        // First student has only first name, look for last name in subsequent students
+        for (let i = 1; i < cleanNames.length; i++) {
+          const parts = cleanNames[i].split(/\s+/);
+          if (parts.length > 1) {
+            sharedLastName = parts[parts.length - 1]; // Get last part as last name
+            Logger.log('Detected shared last name "%s" for students: %s', sharedLastName, cleanNames.join(', '));
+            break;
+          }
+        }
+      } else {
+        // First student has full name, use their last name
+        const firstStudentParts = cleanNames[0].split(/\s+/);
+        sharedLastName = firstStudentParts[firstStudentParts.length - 1];
+        Logger.log('Using last name "%s" from first student for shared last name', sharedLastName);
       }
+    }
+
+    cleanNames.forEach((nm, index) => {
+      const parts = nm.split(/\s+/);
+      // If student has only one word and we have a shared last name, combine them
+      const fullName = (parts.length === 1 && sharedLastName) ? 
+        (parts[0] + ' ' + sharedLastName) : nm;
+      
+      Logger.log('Student %d: Original="%s", Parts=%s, FullName="%s", SharedLastName="%s"', 
+        index + 1, nm, JSON.stringify(parts), fullName, sharedLastName);
+      
+      // Clean the student name (D/L already removed above)
+      let cleanStudentName = fullName.trim();
+      
+      let folderName = studentMap[ cleanStudentName ] || '';
+      if (/D\/L/i.test(title)) {
+        // For demo lessons, create a temporary folder name for display
+        folderName = cleanStudentName + ' DEMO';
+        Logger.log('Demo lesson: event "%s", using temporary folderName "%s" for display', title, folderName);
+      }
+      // Add isOnline property: true if title contains (Cafe) or (Online)
+      const isOnline = /\(\s*(Cafe|Online)\s*\)/i.test(title);
       flat.push({
         eventID:       event.getId(),
         eventName:     title,
         Start:         Utilities.formatDate(rawStart, tz, 'HH:mm'),
         End:           Utilities.formatDate(rawEnd,   tz, 'HH:mm'),
-        studentName:   fullName.trim(),
+        studentName:   cleanStudentName,
         folderName:    folderName,
         pdfUpload:     false,
-        lessonHistory: false
+        lessonHistory: false,
+        evaluationReady: hasEvaluationReady,
+        evaluationDue: hasEvaluationDue,
+        isOnline:      isOnline,
+        teacher:       teacher
       });
     });
   });
@@ -250,21 +324,38 @@ function fetchAndCacheTodayLessons(dateOverride) {
         folderName:    item.folderName,
         studentNames:  [ item.studentName ],
         pdfUpload:     item.pdfUpload,
-        lessonHistory: item.lessonHistory
+        lessonHistory: item.lessonHistory,
+        evaluationReady: item.evaluationReady,
+        evaluationDue: item.evaluationDue,
+        teacher:       item.teacher
       };
     } else {
       grouped[item.eventID].studentNames.push(item.studentName);
+      // If any student has evaluation tags, mark the event accordingly
+      if (item.evaluationReady) grouped[item.eventID].evaluationReady = true;
+      if (item.evaluationDue) grouped[item.eventID].evaluationDue = true;
+      if (!grouped[item.eventID].teacher && item.teacher) {
+        grouped[item.eventID].teacher = item.teacher;
+      }
     }
   });
   const lessons = Object.values(grouped);
   Logger.log('Grouped into %s lessons', lessons.length);
 
-  // 6) Merge old statuses
+  // 6) Merge old statuses and preserve converted demo lessons
   lessons.forEach(lesson => {
     const oldStatus = oldStatusMap[lesson.eventID];
     if (oldStatus) {
       lesson.pdfUpload = oldStatus.pdfUpload;
       lesson.lessonHistory = oldStatus.lessonHistory;
+      lesson.folderName = oldStatus.folderName; // Preserve folderName
+      
+      // Check if this was a demo lesson that has been converted to regular
+      // If the old status has a real folder name (not ending in DEMO), preserve it
+      if (oldStatus.folderName && !oldStatus.folderName.endsWith('DEMO')) {
+        lesson.folderName = oldStatus.folderName;
+        Logger.log(`Preserving converted demo lesson: ${lesson.eventID} -> ${lesson.folderName}`);
+      }
     }
   });
 
@@ -280,7 +371,8 @@ function fetchAndCacheTodayLessons(dateOverride) {
 
   const headers = [
     'eventID', 'eventName', 'Start', 'End',
-    'folderName', 'studentNames', 'pdfUpload', 'lessonHistory'
+    'folderName', 'studentNames', 'pdfUpload', 'lessonHistory',
+    'evaluationReady', 'evaluationDue', 'isOnline', 'teacher'
   ];
   tgt.getRange(1, 1, 1, headers.length).setValues([headers]);
 
@@ -293,7 +385,11 @@ function fetchAndCacheTodayLessons(dateOverride) {
       l.folderName,
       l.studentNames.join(', '),
       l.pdfUpload,
-      l.lessonHistory
+      l.lessonHistory,
+      l.evaluationReady || false,
+      l.evaluationDue || false,
+      l.isOnline || false,
+      l.teacher || ''
     ]);
     tgt.getRange(2, 1, out.length, headers.length).setValues(out);
     Logger.log('Wrote %s lessons to sheet', out.length);
@@ -413,7 +509,7 @@ function createFoldersForStudents(eventName, students) {
 }
 
 function manual() {
-  fetchAndCacheTodayLessons('17/06/2025');
+  fetchAndCacheTodayLessons('12/08/2025');
 }
 
 /**
@@ -469,6 +565,264 @@ function createDemoLessonFolder(eventID, eventName) {
 }
 
 /**
+ * Creates a folder for a demo lesson with detailed information and updates the event
+ * @param {Object} payload - Object containing lesson details
+ * @param {string} payload.lessonType - Type of lesson (Regular, Kids, Kids [Group], Group)
+ * @param {string} payload.studentNumber - Student number (3 digits)
+ * @param {Array} payload.studentNames - Array of student names
+ * @param {string} payload.folderName - Generated folder name
+ * @param {string} payload.eventID - Calendar event ID
+ * @returns {Object} Result object with success status and folder name
+ */
+function createDemoLessonFolderWithDetails(payload) {
+  try {
+    const { lessonType, studentNumber, studentNames, folderName, eventID } = payload;
+    
+    Logger.log(`Creating demo lesson folder with details: ${JSON.stringify(payload)}`);
+    
+    const studentsFolderId = '11KrhsdqEpjUdMMGsNC67WRiS-gG1TAIV'; // Parent folder ID
+    const studentsFolder = DriveApp.getFolderById(studentsFolderId);
+
+    // Check if folder already exists
+    const existingFolders = studentsFolder.getFoldersByName(folderName);
+    if (existingFolders.hasNext()) {
+      Logger.log(`Folder already exists: ${folderName}`);
+      return { success: true, folderName: folderName, message: 'Folder already exists' };
+    }
+
+    // Fetch template IDs from the "Code" sheet
+    const spreadsheet = STUDENTLIST;
+    const codeSheet = spreadsheet.getSheetByName("Code");
+    
+    // Temporarily skip template creation for testing
+    let lessonNoteDocId = null;
+    let lessonHistorySheetId = null;
+    
+    if (codeSheet) {
+      lessonNoteDocId = codeSheet.getRange("E2").getValue();
+      lessonHistorySheetId = codeSheet.getRange("E4").getValue();
+    }
+
+    // Create the main folder
+    const mainFolder = studentsFolder.createFolder(folderName);
+    
+    // Create subfolders with student names
+    const lessonNotesFolder = mainFolder.createFolder(`${studentNames.join(' & ')}'s Lesson Notes`);
+    const evaluationFolder = mainFolder.createFolder(`${studentNames.join(' & ')}'s Evaluation`);
+    
+    // Only create template files if IDs are provided
+    if (lessonNoteDocId && lessonHistorySheetId) {
+      // Create lesson note document with student name (possessive format)
+      const lessonNoteDocTemplate = DriveApp.getFileById(lessonNoteDocId);
+      const lessonNoteFileName = `${studentNames.join(' & ')}'s Lesson Note`;
+      const lessonNoteDoc = lessonNoteDocTemplate.makeCopy(lessonNoteFileName, mainFolder);
+      
+      // Create lesson history spreadsheet with student name (possessive format)
+      const lessonHistorySheetTemplate = DriveApp.getFileById(lessonHistorySheetId);
+      const lessonHistoryFileName = `${studentNames.join(' & ')}'s Lesson History`;
+      const copiedLessonHistorySheet = lessonHistorySheetTemplate.makeCopy(lessonHistoryFileName, mainFolder);
+      const copiedSheet = SpreadsheetApp.openById(copiedLessonHistorySheet.getId());
+      const firstSheet = copiedSheet.getSheets()[0];
+      
+      // Set the student name in the history sheet
+      const studentNameText = studentNames.join(' & ');
+      firstSheet.getRange("A1").setValue(studentNameText);
+      
+      // Add student information to the Student List sheet
+      addStudentToStudentList(studentNames, folderName, lessonNoteDoc.getUrl(), copiedLessonHistorySheet.getUrl());
+    } else {
+      Logger.log('Template file IDs not found - skipping template creation');
+      // Add student information to the Student List sheet without URLs
+      addStudentToStudentList(studentNames, folderName, '', '');
+    }
+    
+    // Update the lessons_today sheet to mark this as a regular lesson (not demo)
+    updateDemoLessonToRegular(eventID, folderName, studentNames);
+    
+    // Increment the lesson type ID
+    incrementLessonTypeID(lessonType);
+    
+    Logger.log(`Successfully created folder: ${folderName}`);
+    return { success: true, folderName: folderName };
+    
+  } catch (error) {
+    Logger.log(`Error creating demo lesson folder: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Gets the next available student number for a given lesson type
+ * @param {string} lessonType - The lesson type (Regular, Kids, Group)
+ * @returns {string} The next available 3-digit student number
+ */
+function getNextStudentNumber(lessonType) {
+  try {
+    const spreadsheet = STUDENTLIST;
+    const codeSheet = spreadsheet.getSheetByName("Code");
+    const codeData = codeSheet.getDataRange().getValues();
+    
+    // Find the row for the lesson type
+    for (let i = 1; i < codeData.length; i++) {
+      let type = codeData[i][0];
+      // Unify Kids and Kids [Group] as 'Kids'
+      if (type && (type === 'Kids' || type === 'Kids [Group]')) type = 'Kids';
+      
+      if (type && type.toString().trim() === lessonType.toString().trim()) {
+        const currentID = parseInt(codeData[i][1], 10);
+        if (!isNaN(currentID)) {
+          // Return the current ID (it will be incremented when folder is created)
+          return currentID.toString().padStart(3, '0');
+        }
+      }
+    }
+    
+    // Default fallback
+    return '001';
+  } catch (error) {
+    Logger.log(`Error getting next student number: ${error.message}`);
+    return '001';
+  }
+}
+
+/**
+ * Adds student information to the Student List sheet
+ * @param {Array} studentNames - Array of student names
+ * @param {string} folderName - The folder name
+ * @param {string} noteUrl - URL to the lesson note document
+ * @param {string} historyUrl - URL to the lesson history spreadsheet
+ */
+function addStudentToStudentList(studentNames, folderName, noteUrl, historyUrl) {
+  try {
+    const studentSheet = STUDENTLIST.getSheetByName('Student List');
+    const data = studentSheet.getDataRange().getValues();
+    
+    // Find the next empty row
+    const nextRow = data.length + 1;
+    
+    // Extract lesson type and ID from folder name
+    // Folder name format: "K053 Khacey Salvador" or "053 Khacey Salvador"
+    let lessonType = 'Regular';
+    let studentId = '';
+    
+    if (folderName) {
+      const parts = folderName.split(' ');
+      if (parts.length >= 2) {
+        const idPart = parts[0];
+        if (idPart.startsWith('K')) {
+          lessonType = 'Kids';
+          studentId = idPart.substring(1); // Remove 'K' prefix
+        } else if (idPart.startsWith('M')) {
+          lessonType = 'Group';
+          studentId = idPart.substring(1); // Remove 'M' prefix
+        } else {
+          lessonType = 'Regular';
+          studentId = idPart;
+        }
+      }
+    }
+    
+    // Prepare the row data
+    const studentName = studentNames.join(' & '); // Join multiple names with ' & '
+    const rowData = [
+      lessonType, // Column A (Lesson Type)
+      studentId, // Column B (ID)
+      studentName, // Column C (Student Name)
+      folderName, // Column D (Student Folder)
+      '', // Column E (Level - empty for now)
+      '', // Column F (Book - empty for now)
+      noteUrl, // Column G (Note)
+      historyUrl // Column H (History)
+    ];
+    
+    // Insert the new row
+    studentSheet.getRange(nextRow, 1, 1, rowData.length).setValues([rowData]);
+    
+    Logger.log(`Added student to Student List: ${studentName} with folder: ${folderName}, type: ${lessonType}, ID: ${studentId}`);
+  } catch (error) {
+    Logger.log(`Error adding student to Student List: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Updates a demo lesson event to become a regular lesson
+ * @param {string} eventID - The calendar event ID
+ * @param {string} folderName - The new folder name
+ * @param {Array} studentNames - Array of student names
+ */
+function updateDemoLessonToRegular(eventID, folderName, studentNames) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sht = ss.getSheetByName('lessons_today');
+    const data = sht.getDataRange().getValues();
+    const hdrs = data.shift();
+
+    for (let r = 0; r < data.length; r++) {
+      if (data[r][hdrs.indexOf('eventID')] === eventID) {
+        // Update the row with new information
+        const studentName = studentNames.join(' & ');
+        sht.getRange(r + 2, hdrs.indexOf('studentNames') + 1).setValue(studentName);
+        sht.getRange(r + 2, hdrs.indexOf('folderName') + 1).setValue(folderName);
+        sht.getRange(r + 2, hdrs.indexOf('pdfUpload') + 1).setValue('FALSE');
+        sht.getRange(r + 2, hdrs.indexOf('lessonHistory') + 1).setValue('FALSE');
+        
+        Logger.log(`Updated demo lesson to regular: ${eventID} -> ${folderName}`);
+        return;
+      }
+    }
+    
+    Logger.log(`Event ID not found in lessons_today: ${eventID}`);
+  } catch (error) {
+    Logger.log(`Error updating demo lesson to regular: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Fetches the Note and History URLs for a given folder name from the 'Student List' sheet.
+ * @param {string} folderName The folder name to look up (can be multiple names separated by commas for group lessons).
+ * @returns {{noteUrl: string, historyUrl: string}|null} An object with the URLs, or null if not found.
+ */
+function getStudentLinks(folderName) {
+  try {
+    const studentSheet = STUDENTLIST.getSheetByName('Student List');
+    if (!studentSheet) {
+      Logger.log('Student List sheet not found');
+      return null;
+    }
+    const data = studentSheet.getDataRange().getValues();
+
+    // Column indices from the spreadsheet:
+    // D: Student Folder (index 3)
+    // G: Note (index 6)
+    // H: History (index 7)
+    const FOLDER_COL_IDX = 3;
+    const NOTE_COL_IDX = 6;
+    const HISTORY_COL_IDX = 7;
+
+    // Handle group lessons - split by comma and take the first folder
+    const folderNames = folderName.split(',').map(name => name.trim());
+    const firstFolderName = folderNames[0];
+
+    for (let i = 1; i < data.length; i++) { // Start from row 2 (index 1) to skip header
+      if (data[i][FOLDER_COL_IDX] && data[i][FOLDER_COL_IDX].toString().trim() === firstFolderName) {
+        return {
+          noteUrl: data[i][NOTE_COL_IDX],
+          historyUrl: data[i][HISTORY_COL_IDX]
+        };
+      }
+    }
+
+    Logger.log(`Folder not found in Student List: "${firstFolderName}"`);
+    return null; // Folder not found
+  } catch (e) {
+    Logger.log(`Error in getStudentLinks for folder "${folderName}": ${e.toString()}`);
+    return { error: e.toString() };
+  }
+}
+
+/**
  * Extracts student name from a demo lesson event name
  * @param {string} eventName - The full event name (e.g. "John Smith D/L")
  * @returns {string} The student name (e.g. "John Smith")
@@ -476,5 +830,134 @@ function createDemoLessonFolder(eventID, eventName) {
 function extractStudentNameFromDemo(eventName) {
   // Split by D/L and take the first part, then trim any whitespace
   return eventName.split(/D\/L/i)[0].trim();
+}
+
+/**
+ * Changes the color of a calendar event based on evaluation tags
+ * @param {string} eventID - The calendar event ID
+ * @param {string} color - The color to set (e.g., 'red', 'blue', 'green', etc.)
+ */
+function changeEventColor(eventID, color) {
+  try {
+    // Try to find the event in both calendars
+    const calMain = CalendarApp.getCalendarById(CALENDAR_ID);
+    const calDemo = CalendarApp.getCalendarById(DEMO_CALENDAR_ID);
+    
+    let event = null;
+    
+    // Search in main calendar
+    if (calMain) {
+      try {
+        event = calMain.getEventById(eventID);
+      } catch (e) {
+        Logger.log('Event not found in main calendar: ' + eventID);
+      }
+    }
+    
+    // If not found in main calendar, search in demo calendar
+    if (!event && calDemo) {
+      try {
+        event = calDemo.getEventById(eventID);
+      } catch (e) {
+        Logger.log('Event not found in demo calendar: ' + eventID);
+      }
+    }
+    
+    if (event) {
+      event.setColor(color);
+      Logger.log('Changed event color to ' + color + ' for event: ' + eventID);
+      return { success: true, message: 'Event color updated successfully' };
+    } else {
+      throw new Error('Event not found in any calendar');
+    }
+  } catch (error) {
+    Logger.log('Error changing event color: ' + error.message);
+    return { success: false, message: error.message };
+  }
+}
+
+/**
+ * Web method: Given a folderName, returns all student names from the Student List sheet that match it.
+ * @param {string} folderName
+ * @returns {string[]} Array of student names
+ */
+function getStudentNamesByFolder(folderName) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const studentSheet = ss.getSheetByName('Student List');
+  if (!studentSheet) throw new Error('Student List sheet not found');
+  
+  const data = studentSheet.getDataRange().getValues();
+  const names = [];
+  
+  for (let i = 1; i < data.length; i++) {
+    const studentFolder = data[i][3]; // Folder column
+    if (studentFolder === folderName) {
+      names.push(data[i][2]); // Name column
+    }
+  }
+  
+  return names;
+}
+
+/**
+ * Fetches evaluation data for a specific student from the "Evaluation" sheet
+ * @param {string} studentName - The name of the student
+ * @returns {Array} Array of evaluation objects sorted by evaluation number
+ */
+function getStudentEvaluations(studentName) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const evalSheet = ss.getSheetByName('Evaluation');
+  if (!evalSheet) throw new Error('Evaluation sheet not found');
+  
+  const data = evalSheet.getDataRange().getValues();
+  if (data.length < 2) return []; // No data
+  
+  const headers = data.shift();
+  const evaluations = [];
+  
+  // Find column indices
+  const studentIdCol = headers.indexOf('Student ID');
+  const evalNumCol = headers.indexOf('Evaluation Number');
+  const evalDateCol = headers.indexOf('Evaluation Number and Date');
+  const grammarCol = headers.indexOf('Grammar');
+  const vocabCol = headers.indexOf('Vocabulary');
+  const speakingCol = headers.indexOf('Speaking');
+  const listeningCol = headers.indexOf('Listening');
+  const readingCol = headers.indexOf('Reading');
+  const writingCol = headers.indexOf('Writing');
+  const fluencyCol = headers.indexOf('Fluency');
+  const selfStudyCol = headers.indexOf('Self-Study');
+  
+  // Filter rows for the specific student
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    const studentId = row[studentIdCol];
+    
+    // Check if this row belongs to the student
+    if (studentId && studentId.toString().includes(studentName)) {
+      const evaluation = {
+        evaluationNumber: row[evalNumCol] || '',
+        evaluationDate: row[evalDateCol] || '',
+        grammar: row[grammarCol] || '',
+        vocabulary: row[vocabCol] || '',
+        speaking: row[speakingCol] || '',
+        listening: row[listeningCol] || '',
+        reading: row[readingCol] || '',
+        writing: row[writingCol] || '',
+        fluency: row[fluencyCol] || '',
+        selfStudy: row[selfStudyCol] || ''
+      };
+      evaluations.push(evaluation);
+    }
+  }
+  
+  // Sort by evaluation number (convert to number for proper sorting)
+  evaluations.sort((a, b) => {
+    const aNum = parseInt(a.evaluationNumber) || 0;
+    const bNum = parseInt(b.evaluationNumber) || 0;
+    return aNum - bNum;
+  });
+  
+  return evaluations;
 }
 
