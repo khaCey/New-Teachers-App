@@ -2,6 +2,11 @@
 
 All notable changes to the New Teachers App will be documented in this file.
 
+## [v0.0.28.02] - 2024-12-19
+
+### Changed
+- Increased calendar date font size from 3rem to 3.125rem (+2px) for better visibility
+
 ## [v0.0.28.01] - 2024-12-19
 
 ### Added
