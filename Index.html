@@ -2685,16 +2685,13 @@
         }
       }
       
-      // Determine lesson type based on number of students
-      if (studentNames.length > 1) {
-        lessonType = 'Group';
-      } else if (studentNames.length === 1) {
-        // Check if it's a kids lesson (look for 子 character or "Kids" in the name)
-        if (event.eventName && (event.eventName.includes('子') || /kids/i.test(event.eventName))) {
-          lessonType = 'Kids';
-        } else {
-          lessonType = 'Regular';
-        }
+      // Determine lesson type - check kids indicators first
+      if (event.eventName && (event.eventName.includes('子') || /kids/i.test(event.eventName))) {
+        // It's a kids lesson - determine if group or individual
+        lessonType = studentNames.length > 1 ? 'Kids [Group]' : 'Kids';
+      } else {
+        // Not a kids lesson - determine if group or individual
+        lessonType = studentNames.length > 1 ? 'Group' : 'Regular';
       }
       
       console.log('Parsed student info:', { studentNames, lessonType, event });

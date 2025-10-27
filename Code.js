@@ -230,12 +230,10 @@ function fetchAndCacheTodayLessons(dateOverride) {
     const rawStart = event.getStartTime();
     const rawEnd = event.getEndTime();
     const namePart = title.split('(')[0].replace(/子/g, '');
-    const names = namePart.split(/\s+and\s+/i).map(n => n.trim()).filter(Boolean);
-
-    // Clean D/L markers from names BEFORE processing shared last names
-    const cleanNames = names.map(nm => {
-      return nm.replace(/\s*D\/L\s*/i, '').trim();
-    });
+    // Clean D/L markers BEFORE splitting by "and"
+    const namePartClean = namePart.replace(/\s*D\/L\s*/i, '').trim();
+    const names = namePartClean.split(/\s+and\s+/i).map(n => n.trim()).filter(Boolean);
+    const cleanNames = names; // Already clean
 
     // Check for evaluation tags in description
     const description = event.getDescription() || '';
@@ -509,7 +507,7 @@ function createFoldersForStudents(eventName, students) {
 }
 
 function manual() {
-  fetchAndCacheTodayLessons('12/08/2025');
+  fetchAndCacheTodayLessons('12/10/2025');
 }
 
 /**
@@ -662,13 +660,15 @@ function getNextStudentNumber(lessonType) {
     const codeSheet = spreadsheet.getSheetByName("Code");
     const codeData = codeSheet.getDataRange().getValues();
     
+    // Unify Kids and Kids [Group] as 'Kids' for matching
+    let searchType = lessonType;
+    if (lessonType === 'Kids [Group]') searchType = 'Kids';
+    
     // Find the row for the lesson type
     for (let i = 1; i < codeData.length; i++) {
       let type = codeData[i][0];
-      // Unify Kids and Kids [Group] as 'Kids'
-      if (type && (type === 'Kids' || type === 'Kids [Group]')) type = 'Kids';
       
-      if (type && type.toString().trim() === lessonType.toString().trim()) {
+      if (type && type.toString().trim() === searchType.toString().trim()) {
         const currentID = parseInt(codeData[i][1], 10);
         if (!isNaN(currentID)) {
           // Return the current ID (it will be incremented when folder is created)
