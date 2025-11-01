@@ -1832,16 +1832,20 @@
       if (isLoading) {
         button.disabled = true;
         button.classList.add('loading');
-        // Store original text
-        button.dataset.originalText = button.textContent || button.innerText;
-        button.textContent = 'Loading...';
+        // Store original HTML (including icons)
+        button.dataset.originalHTML = button.innerHTML;
+        button.innerHTML = 'Loading...';
       } else {
         button.disabled = false;
         button.classList.remove('loading');
-        // Restore original text
-        if (button.dataset.originalText) {
-          button.textContent = button.dataset.originalText;
-          delete button.dataset.originalText;
+        // Restore original HTML (including icons)
+        if (button.dataset.originalHTML) {
+          button.innerHTML = button.dataset.originalHTML;
+          delete button.dataset.originalHTML;
+          // Re-initialize Lucide icons after restoring HTML
+          if (window.lucide && lucide.createIcons) {
+            lucide.createIcons();
+          }
         }
       }
     }
@@ -1850,16 +1854,20 @@
       if (isLoading) {
         button.classList.add('loading');
         button.style.pointerEvents = 'none';
-        // Store original text
-        button.dataset.originalText = button.textContent || button.innerText;
-        button.textContent = 'Loading...';
+        // Store original HTML (including icons)
+        button.dataset.originalHTML = button.innerHTML;
+        button.innerHTML = 'Loading...';
       } else {
         button.classList.remove('loading');
         button.style.pointerEvents = '';
-        // Restore original text
-        if (button.dataset.originalText) {
-          button.textContent = button.dataset.originalText;
-          delete button.dataset.originalText;
+        // Restore original HTML (including icons)
+        if (button.dataset.originalHTML) {
+          button.innerHTML = button.dataset.originalHTML;
+          delete button.dataset.originalHTML;
+          // Re-initialize Lucide icons after restoring HTML
+          if (window.lucide && lucide.createIcons) {
+            lucide.createIcons();
+          }
         }
       }
     }
