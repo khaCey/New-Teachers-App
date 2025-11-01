@@ -1864,6 +1864,9 @@
       }
     }
   
+    // Cache for teacher data - loaded once at startup
+    let cachedTeachers = [];
+
     // On load: fetch event data, render once, then start polling statuses
     document.addEventListener('DOMContentLoaded', () => {
       // set the dashboard heading to today's date in DD/MM/YYYY
@@ -1871,14 +1874,24 @@
       const today = new Date();
       titleEl.textContent = String(today.getDate());
 
-      // Add click handlers to modal overlays to close modals when clicking outside
-      document.querySelectorAll('.modal').forEach(modal => {
-        modal.addEventListener('click', (e) => {
-          if (e.target === modal) {
-            modal.classList.remove('show');
+      // Load teacher data once at startup
+      google.script.run
+        .withSuccessHandler(teachers => {
+          cachedTeachers = teachers;
+          // Populate teacher dropdown if history modal exists
+          const teacherSelect = document.getElementById('teacher');
+          if (teacherSelect && !teacherSelect.children.length) {
+            teachers.forEach(t => {
+              const option = document.createElement('option');
+              option.value = option.text = t;
+              teacherSelect.appendChild(option);
+            });
           }
-        });
-      });
+        })
+        .withFailureHandler(e => {
+          console.error('Could not load teachers:', e.message);
+        })
+        .getTeacherList();
 
       showLoading();
       google.script.run
@@ -2340,18 +2353,26 @@
       if (!folderName) {
         return alert('No folder selected!');
       } 
-      // populate teacher dropdown on first open
+      // populate teacher dropdown from cache (loaded at startup)
       const sel = document.getElementById('teacher');
-      if (!sel.children.length) {
+      if (!sel.children.length && cachedTeachers.length > 0) {
+        cachedTeachers.forEach(t => {
+          const o = document.createElement('option');
+          o.value = o.text = t;
+          sel.appendChild(o);
+        });
+      } else if (!sel.children.length && cachedTeachers.length === 0) {
+        // Fallback: if cache is empty, try loading once more
         google.script.run
-          .withSuccessHandler(teachers=>{
-            teachers.forEach(t=>{
+          .withSuccessHandler(teachers => {
+            cachedTeachers = teachers;
+            teachers.forEach(t => {
               const o = document.createElement('option');
               o.value = o.text = t;
-              sel.append(o);
+              sel.appendChild(o);
             });
           })
-          .withFailureHandler(e=>alert("Could not load teachers: "+e.message))
+          .withFailureHandler(e => alert("Could not load teachers: " + e.message))
           .getTeacherList();
       }
 
