@@ -2,6 +2,7 @@ const SS_ID = "1IobCrDaNAPquEX0WKR8fLyh0p-Q9XutIdHHuu_3XXEg";
 const STUDENTLIST = SpreadsheetApp.openById(SS_ID);
 const CALENDAR_ID = 'greensquare.jp_h8u0oufn8feana384v67o46o78@group.calendar.google.com';
 const DEMO_CALENDAR_ID = 'greensquare.jp_1m1bhvfu9mtts7gq9s9jsj9kbk@group.calendar.google.com';
+const OWNER_CALENDAR_ID = 'c_403306dccf2039f61a620a4cfc22424c5a6f79e945054e57f30ecc50c90b9207@group.calendar.google.com';
 
 /** Web app entry point */
 function doGet() {
@@ -198,6 +199,8 @@ function fetchAndCacheTodayLessons(dateOverride) {
   if (!calMain) throw new Error('Calendar not found: ' + CALENDAR_ID);
   const calDemo = CalendarApp.getCalendarById(DEMO_CALENDAR_ID);
   if (!calDemo) throw new Error('Calendar not found: ' + DEMO_CALENDAR_ID);
+  const calOwner = CalendarApp.getCalendarById(OWNER_CALENDAR_ID);
+  if (!calOwner) throw new Error('Calendar not found: ' + OWNER_CALENDAR_ID);
 
   const startTime = new Date(targetDate);
   const endTime = new Date(targetDate);
@@ -206,8 +209,15 @@ function fetchAndCacheTodayLessons(dateOverride) {
 
   const eventsMain = calMain.getEvents(startTime, endTime);
   const eventsDemo = calDemo.getEvents(startTime, endTime);
+  const eventsOwner = calOwner.getEvents(startTime, endTime);
   Logger.log('Fetched %s main events, %s demo events', eventsMain.length, eventsDemo.length);
-  const allEvents = eventsMain.concat(eventsDemo);
+  // After fetching eventsMain, eventsDemo, eventsOwner
+  const allEvents = [];
+
+  // Tag each event with calendar type
+  eventsMain.forEach(e => allEvents.push({ event: e, calendarType: 'main' }));
+  eventsDemo.forEach(e => allEvents.push({ event: e, calendarType: 'demo' }));
+  eventsOwner.forEach(e => allEvents.push({ event: e, calendarType: 'owner' }));
 
   // 4) Build flat array: one entry per student occurrence
   const studentSheet = STUDENTLIST.getSheetByName('Student List');
@@ -222,7 +232,7 @@ function fetchAndCacheTodayLessons(dateOverride) {
   }
 
   const flat = [];
-  allEvents.forEach(event => {
+  allEvents.forEach(({ event, calendarType }) => {
     const title = event.getTitle();
     if (/break/i.test(title) || /teacher/i.test(title)) return;
     if (!isValidLessonEvent_(event)) return;
@@ -304,7 +314,8 @@ function fetchAndCacheTodayLessons(dateOverride) {
         evaluationReady: hasEvaluationReady,
         evaluationDue: hasEvaluationDue,
         isOnline:      isOnline,
-        teacher:       teacher
+        teacher:       teacher,
+        calendarType: calendarType,
       });
     });
   });
@@ -325,7 +336,8 @@ function fetchAndCacheTodayLessons(dateOverride) {
         lessonHistory: item.lessonHistory,
         evaluationReady: item.evaluationReady,
         evaluationDue: item.evaluationDue,
-        teacher:       item.teacher
+        teacher:       item.teacher,
+        calendarType: item.calendarType,
       };
     } else {
       grouped[item.eventID].studentNames.push(item.studentName);
@@ -370,7 +382,8 @@ function fetchAndCacheTodayLessons(dateOverride) {
   const headers = [
     'eventID', 'eventName', 'Start', 'End',
     'folderName', 'studentNames', 'pdfUpload', 'lessonHistory',
-    'evaluationReady', 'evaluationDue', 'isOnline', 'teacher'
+    'evaluationReady', 'evaluationDue', 'isOnline', 'teacher', 
+    'calendarType'
   ];
   tgt.getRange(1, 1, 1, headers.length).setValues([headers]);
 
@@ -387,7 +400,8 @@ function fetchAndCacheTodayLessons(dateOverride) {
       l.evaluationReady || false,
       l.evaluationDue || false,
       l.isOnline || false,
-      l.teacher || ''
+      l.teacher || '',
+      l.calendarType || ''
     ]);
     tgt.getRange(2, 1, out.length, headers.length).setValues(out);
     Logger.log('Wrote %s lessons to sheet', out.length);
@@ -507,7 +521,7 @@ function createFoldersForStudents(eventName, students) {
 }
 
 function manual() {
-  fetchAndCacheTodayLessons('12/10/2025');
+  fetchAndCacheTodayLessons('04/01/2026');
 }
 
 /**

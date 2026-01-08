@@ -106,6 +106,8 @@ function _appendLessonHistoryRow({ folderName, date, teacher, warmUpTopic, unitP
     const template = ss.getSheetByName('Template');
     if (!template) throw new Error('Template sheet missing.');
     sheet = template.copyTo(ss).setName(year);
+    ss.setActiveSheet(sheet);
+    ss.moveActiveSheet(1); // Move to first position
   }
   sheet.appendRow([date, teacher, warmUpTopic, unitPages, homework, '', comments, studentRequests, advice]);
 }

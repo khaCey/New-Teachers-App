@@ -101,6 +101,20 @@
     .event-block.complete { border-left-color: #388E3C; background: #C8E6C9	; }
     .event-block.complete:hover { border-left-color: #2E7D32; background: #A5D6A7; }
     .lesson-folder { font-weight:700; }
+    
+    /* Demo lessons */
+    .event-block.demo {
+      background-color: #e8f5ff; /* light blue */
+      border-left: 6px solid #007bff;
+    }
+
+    /* Owner’s calendar */
+    .event-block.owner {
+      background-color: #2b2b2b;
+      border-left: 6px solid #000000;
+      color: #ffffff;
+    }
+
 
     /* FeatureNudge tooltip styles */
     .fnudge { 
@@ -490,6 +504,7 @@
       border: 1px solid rgba(0, 0, 0, 0.05) !important;
       overflow: hidden;
       font-family: "Inter", sans-serif !important;
+      margin: auto !important;
       transform: translateY(6px) scale(0.98);
       opacity: 0;
       animation: pop 0.24s ease-out forwards;
@@ -500,6 +515,13 @@
         transform: translateY(0) scale(1);
         opacity: 1;
       }
+    }
+
+    /* Ensure success modal is centered */
+    #successModal.modal.show {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
     }
 
     /* Success Header */
@@ -1431,18 +1453,18 @@
 
       <!-- Actions -->
       <div class="upload-modal-actions">
-        <button onclick="uploadPDF()" class="upload-btn upload-btn-primary">
-          <i data-lucide="upload" class="upload-btn-icon"></i>
-          <span>Upload PDF</span>
+        <button id="uploadLessonHistoryBtn" onclick="openLessonHistoryFormFromUpload()" class="upload-btn upload-btn-primary">
+          <i data-lucide="sheet" class="upload-btn-icon"></i>
+          <span>Upload Lesson History</span>
         </button>
         <button id="lessonNotesBtn" onclick="openLessonNotes()" class="upload-btn upload-btn-secondary">
           <i data-lucide="file-text" class="upload-btn-icon"></i>
           <span>Lesson Notes</span>
         </button>
-                    <button id="lessonHistoryBtn" onclick="openLessonHistory()" class="upload-btn upload-btn-primary">
-              <i data-lucide="sheet" class="upload-btn-icon"></i>
-              <span>Lesson History</span>
-            </button>
+        <button id="lessonHistoryBtn" onclick="openLessonHistory()" class="upload-btn upload-btn-primary">
+          <i data-lucide="sheet" class="upload-btn-icon"></i>
+          <span>Lesson History</span>
+        </button>
       </div>
     </div>
   </div>
@@ -1464,17 +1486,13 @@
       <div class="success-modal-divider"></div>
 
       <div class="success-modal-body">
-        <p>What would you like to do with this note?</p>
+        <p>PDF uploaded successfully. Lesson is complete!</p>
       </div>
 
       <div id="successButtons" class="success-modal-actions">
-        <button onclick="goToLessonHistoryForm()" class="success-btn success-btn-primary">
-          <i data-lucide="sheet" class="success-btn-icon"></i>
-          <span>Add Lesson History</span>
-        </button>
-        <button onclick="handleAlreadyWritten()" class="success-btn success-btn-secondary">
+        <button onclick="closeSuccessModal()" class="success-btn success-btn-primary">
           <i data-lucide="check-line" class="success-btn-icon"></i>
-          <span>Already Written</span>
+          <span>Done</span>
         </button>
       </div>
     </div>
@@ -1731,6 +1749,17 @@
 
       <div class="success-modal-body">
         <p>Lesson history has been successfully recorded.</p>
+      </div>
+
+      <div id="lessonHistorySuccessButtons" class="success-modal-actions">
+        <button onclick="goToUploadForm()" class="success-btn success-btn-primary">
+          <i data-lucide="upload" class="success-btn-icon"></i>
+          <span>Upload PDF</span>
+        </button>
+        <button onclick="closeLessonHistorySuccessModal()" class="success-btn success-btn-secondary">
+          <i data-lucide="check-line" class="success-btn-icon"></i>
+          <span>Done</span>
+        </button>
       </div>
     </div>
   </div>
@@ -2060,7 +2089,7 @@
         // Debug: Log event object and isOnline property
         console.log('Event:', e.eventName, 'isOnline:', e.isOnline, e);
         const card = document.createElement('div');
-        card.className = 'event-block';
+        card.className = `event-block ${e.calendarType}`;
         card.id = e.eventID;
 
         // Position & size
@@ -2250,9 +2279,87 @@
       const dateInput = document.getElementById('date');
       dateInput.valueAsDate = new Date();
 
+      // Always start with "Upload Lesson History" button when modal first opens
+      // The button will only change to "Upload PDF" after lesson history is submitted
+      updateUploadModalButton(false);
+
       // show the upload modal, hide any others
       document.getElementById('uploadModal').classList.add('show');
       document.getElementById('successModal').classList.remove('show');
+    }
+
+    // Function to update the upload modal button based on lesson history status
+    function updateUploadModalButton(lessonHistoryDone) {
+      const btn = document.getElementById('uploadLessonHistoryBtn');
+      if (!btn) return;
+      
+      if (lessonHistoryDone) {
+        // Lesson history is done, show "Upload PDF" button
+        btn.onclick = uploadPDF;
+        btn.innerHTML = '<i data-lucide="upload" class="upload-btn-icon"></i><span>Upload PDF</span>';
+        lucide.createIcons();
+      } else {
+        // Lesson history not done, show "Upload Lesson History" button
+        btn.onclick = openLessonHistoryFormFromUpload;
+        btn.innerHTML = '<i data-lucide="sheet" class="upload-btn-icon"></i><span>Upload Lesson History</span>';
+        lucide.createIcons();
+      }
+    }
+
+    // Function to open lesson history form from upload modal
+    function openLessonHistoryFormFromUpload() {
+      const folderName = document.getElementById('hiddenFolderName').value;
+      const eventID = selectedEventID;
+      if (!folderName || !eventID) {
+        return alert('No folder or event selected!');
+      }
+      openLessonHistoryForm(eventID, folderName);
+    }
+
+    function openLessonHistoryForm(eventID, folderName) {
+      selectedEventID = eventID;
+      document.getElementById('hiddenFolderName').value = folderName;
+      
+      // Set today's date in the user's local timezone:
+      const dateInput = document.getElementById('date');
+      dateInput.valueAsDate = new Date();
+      
+      // Populate teacher dropdown from cache (loaded at startup)
+      const sel = document.getElementById('teacher');
+      if (!sel.children.length && cachedTeachers.length > 0) {
+        cachedTeachers.forEach(t => {
+          const o = document.createElement('option');
+          o.value = o.text = t;
+          sel.appendChild(o);
+        });
+      } else if (!sel.children.length && cachedTeachers.length === 0) {
+        // Fallback: if cache is empty, try loading once more
+        google.script.run
+          .withSuccessHandler(teachers => {
+            cachedTeachers = teachers;
+            teachers.forEach(t => {
+              const o = document.createElement('option');
+              o.value = o.text = t;
+              sel.appendChild(o);
+            });
+          })
+          .withFailureHandler(e => alert("Could not load teachers: " + e.message))
+          .getTeacherList();
+      }
+      
+      // Clear form fields
+      document.getElementById('warmUpTopic').value = '';
+      document.getElementById('unitPages').value = '';
+      document.getElementById('homework').value = '';
+      document.getElementById('comments').value = '';
+      document.getElementById('studentRequests').value = '';
+      document.getElementById('advice').value = '';
+      
+      // Show history modal, hide any others
+      document.getElementById('historyModal').classList.add('show');
+      document.getElementById('uploadModal').classList.remove('show');
+      document.getElementById('successModal').classList.remove('show');
+      document.getElementById('lessonHistorySuccessModal').classList.remove('show');
     }
 
     function closeUploadModal() {
@@ -2266,8 +2373,17 @@
 
     // when upload succeeds:
     function showSuccessPage(message, hideButtons = false) {
-      // hide upload modal first
-      closeUploadModal();
+      // Force close lesson history success modal - it should NOT appear
+      const lessonHistoryModal = document.getElementById('lessonHistorySuccessModal');
+      lessonHistoryModal.classList.remove('show');
+      
+      // Close upload modal if it's open
+      if (document.getElementById('uploadModal').classList.contains('show')) {
+        closeUploadModal();
+      }
+      
+      // Ensure lesson history success modal stays closed
+      lessonHistoryModal.classList.remove('show');
       // Always show "PDF uploaded" as heading (ignore server message)
       document.getElementById('successMessage').textContent = "PDF uploaded";
       
@@ -2283,11 +2399,20 @@
       }
       document.getElementById('successFileName').textContent = fileName;
       
+      // Update success modal body text
+      const successBody = document.querySelector('#successModal .success-modal-body');
+      if (successBody) {
+        successBody.innerHTML = '<p>PDF uploaded successfully. Lesson is complete!</p>';
+      }
+      
       // handle button visibility
       const btns = document.getElementById('successButtons');
       if (btns) btns.style.display = hideButtons ? 'none' : 'grid';
-      // show the success modal
+      
+      // Show the PDF success modal (successModal), NOT lesson history success modal
       document.getElementById('successModal').classList.add('show');
+      // Ensure lesson history success modal is closed
+      lessonHistoryModal.classList.remove('show');
     }
 
     function closeHistoryModal() {
@@ -2299,35 +2424,48 @@
     * Disables the button, shows spinner, calls server, then re-enables.
     */
     function uploadPDF() {
-      // Check which modal we're in and get the appropriate values
+      // Get folder name and date - check multiple sources
       let folderName, date, btn;
       
+      // Try to get from hidden field first (set by goToUploadForm)
+      folderName = document.getElementById('hiddenFolderName').value || document.getElementById('studentSearch').value;
+      date = document.getElementById('date').value;
+      
+      // If no date, use today's date
+      if (!date) {
+        const today = new Date();
+        date = today.toISOString().split('T')[0];
+      }
+      
+      // Determine which button to use for loading state
       if (document.getElementById('uploadModal').classList.contains('show')) {
-        // We're in the upload modal
-        folderName = document.getElementById('studentSearch').value;
-        date = document.getElementById('date').value;
-        btn = document.querySelector('#uploadModal button');
+        btn = document.getElementById('uploadLessonHistoryBtn');
       } else if (document.getElementById('editLessonModal').classList.contains('show')) {
-        // We're in the edit modal
-        folderName = document.getElementById('folderName').value;
-        date = new Date().toISOString().split('T')[0]; // Today's date
         btn = document.getElementById('uploadPDFButton');
       } else {
-        return alert("Please select a folder & date.");
+        // Called directly (not from a modal) - no button to update
+        btn = null;
       }
 
       if (!folderName || !date) {
         return alert("Please select a folder & date.");
       }
 
-      // 1) Lock the button and show loading state
-      setButtonLoading(btn, true);
+      // 1) Ensure lesson history success modal is closed before starting upload
+      document.getElementById('lessonHistorySuccessModal').classList.remove('show');
+      
+      // 2) Lock the button and show loading state (if button exists)
+      if (btn) {
+        setButtonLoading(btn, true);
+      }
 
-      // 2) Call server:
+      // 3) Call server:
       google.script.run
         .withSuccessHandler(resp => {
-          // a) Re-enable button
-          setButtonLoading(btn, false);
+          // a) Re-enable button (if exists)
+          if (btn) {
+            setButtonLoading(btn, false);
+          }
 
           // b) Update localStorage
           const all = JSON.parse(localStorage.getItem('dashboardStatuses') || '{}');
@@ -2342,13 +2480,38 @@
             card.classList.remove('history','complete');
           }
 
-          // d) Show the "success" modal
-          showSuccessPage(resp.message);
+          // d) Keep upload modal open briefly to show completion, then close and show PDF success modal
+          setTimeout(() => {
+            // Ensure lesson history success modal stays closed
+            const lessonHistoryModal = document.getElementById('lessonHistorySuccessModal');
+            lessonHistoryModal.classList.remove('show');
+            
+            // Ensure upload modal is still open
+            const uploadModal = document.getElementById('uploadModal');
+            if (uploadModal && uploadModal.classList.contains('show')) {
+              // Close upload modal
+              closeUploadModal();
+              // Ensure lesson history success modal is still closed
+              lessonHistoryModal.classList.remove('show');
+              // Show PDF success modal (NOT lesson history success modal)
+              showSuccessPage(resp.message);
+            }
+          }, 800); // Brief delay to show button stopped loading
         })
         .withFailureHandler(err => {
-          // a) Re-enable button
-          setButtonLoading(btn, false);
-          // b) Alert the error
+          // a) Re-enable button (if exists)
+          if (btn) {
+            setButtonLoading(btn, false);
+          }
+          // b) Keep upload modal open on failure - don't close it
+          // Ensure lesson history success modal stays closed
+          document.getElementById('lessonHistorySuccessModal').classList.remove('show');
+          // Ensure upload modal stays open
+          const uploadModal = document.getElementById('uploadModal');
+          if (uploadModal && !uploadModal.classList.contains('show')) {
+            uploadModal.classList.add('show');
+          }
+          // c) Alert the error
           alert("Upload failed: " + err.message);
         })
         .uploadStudentPDF({ folderName, date });
@@ -2387,6 +2550,54 @@
       // hide success modal and show history modal
       closeSuccessModal();
       document.getElementById('historyModal').classList.add('show');
+    }
+
+    // Function to go from lesson history success modal - open upload modal and upload PDF
+    function goToUploadForm() {
+      const folderName = document.getElementById('hiddenFolderName').value;
+      const date = document.getElementById('date').value;
+      if (!folderName || !date) {
+        return alert('No folder or date selected!');
+      }
+      
+      // Hide lesson history success modal FIRST
+      closeLessonHistorySuccessModal();
+      
+      // Set values needed for upload
+      document.getElementById('studentSearch').value = folderName;
+      document.getElementById('hiddenFolderName').value = folderName;
+      document.getElementById('date').value = date;
+      
+      // Update button to show "Upload PDF" since lesson history is done
+      updateUploadModalButton(true);
+      
+      // Ensure all other modals are closed (double-check)
+      document.getElementById('successModal').classList.remove('show');
+      document.getElementById('lessonHistorySuccessModal').classList.remove('show');
+      document.getElementById('historyModal').classList.remove('show');
+      
+      // Open upload modal and ensure it stays open
+      const uploadModal = document.getElementById('uploadModal');
+      uploadModal.classList.add('show');
+      
+      // Delay to ensure modal is visible and button is updated, then start upload
+      // Use a longer delay to ensure the modal transition is complete
+      setTimeout(() => {
+        // Double-check that lesson history success modal is still closed
+        const lessonHistoryModal = document.getElementById('lessonHistorySuccessModal');
+        lessonHistoryModal.classList.remove('show');
+        
+        // Ensure upload modal is still open before starting upload
+        if (uploadModal.classList.contains('show') && !lessonHistoryModal.classList.contains('show')) {
+          // Start the upload - modal will stay open during upload
+          uploadPDF();
+        } else {
+          // If modal closed unexpectedly, reopen it
+          uploadModal.classList.add('show');
+          lessonHistoryModal.classList.remove('show');
+          uploadPDF();
+        }
+      }, 300);
     }
 
     function submitLessonHistory(){
@@ -2434,7 +2645,12 @@
               card.classList.add('complete');
             }
 
-            // 3) Show the new lesson history success modal
+            // 3) Update upload modal button if modal is open
+            if (document.getElementById('uploadModal').classList.contains('show')) {
+              updateUploadModalButton(true);
+            }
+
+            // 4) Show the new lesson history success modal
             showLessonHistorySuccessPage(folderName, date);
           } else {
             alert("Error: " + resp.message);
@@ -2520,7 +2736,7 @@
 
     function createEventBlock(event) {
       const card = document.createElement('div');
-      card.className = 'event-block';
+      card.className = `event-block ${e.calendarType}`;
       if (event.pdfUpload) card.classList.add('uploaded');
       if (event.lessonHistory) card.classList.add('history');
       if (event.pdfUpload && event.lessonHistory) card.classList.add('complete');
@@ -3236,10 +3452,7 @@
       // Show the lesson history success modal
       document.getElementById('lessonHistorySuccessModal').classList.add('show');
       
-      // Auto-close after 2 seconds
-      setTimeout(() => {
-        closeLessonHistorySuccessModal();
-      }, 2000);
+      // Don't auto-close - let user click button to proceed to PDF upload
     }
 
     // Function to close lesson history success modal
