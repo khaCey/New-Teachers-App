@@ -264,6 +264,16 @@ function fetchAndCacheTodayLessons(dateOverride) {
     Logger.log('No lessons_today yet, fingerprint empty: ' + e);
   }
 
+  // Penultimate lesson = evaluation due when AppState B5 is TRUE (title x/y with y-x===1)
+  let penultimateEvalDue = false;
+  try {
+    const appStateSheet = getOrCreateAppStateSheet(ss);
+    const b5 = appStateSheet.getRange(5, 2).getValue();
+    penultimateEvalDue = (b5 === true || String(b5).toLowerCase() === 'true');
+  } catch (e) {
+    Logger.log('AppState B5 not set or error: ' + e);
+  }
+
   // 1) Read existing statuses (pdfUpload & lessonHistory) from 'lessons_today' sheet
   const oldStatusMap = {};
   try {
@@ -354,8 +364,15 @@ function fetchAndCacheTodayLessons(dateOverride) {
 
     // Check for evaluation tags in description (only change color for normal lessons)
     const description = event.getDescription() || '';
-    const hasEvaluationReady = description.includes('#evaluationReady');
-    const hasEvaluationDue = description.includes('#evaluationDue');
+    let hasEvaluationReady = description.includes('#evaluationReady');
+    let hasEvaluationDue = description.includes('#evaluationDue');
+    // If AppState B5 is true: title "x/y" with y-x===1 (penultimate lesson) => evaluation due
+    const fractionMatch = title.match(/(\d+)\s*\/\s*(\d+)/);
+    if (penultimateEvalDue && fractionMatch) {
+      const x = parseInt(fractionMatch[1], 10);
+      const y = parseInt(fractionMatch[2], 10);
+      if (y - x === 1) hasEvaluationDue = true;
+    }
     const teacherMatch = description.match(/#teacher(\w+)/i);
     const teacher = teacherMatch ? teacherMatch[1] : '';
 
