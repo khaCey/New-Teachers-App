@@ -74,7 +74,7 @@ function getCacheVersion() {
 
 /**
  * Computes a fingerprint of lessons_today for change detection.
- * Returns a string that changes when events are added/removed or evaluation flags change.
+ * Uses all column values so any change to the cached data bumps the version.
  * @returns {string}
  */
 function getLessonsTodayFingerprint() {
@@ -83,19 +83,9 @@ function getLessonsTodayFingerprint() {
   if (!sheet) return '';
   const data = sheet.getDataRange().getValues();
   if (data.length < 2) return '';
-  const headers = data[0].map(h => String(h).trim());
-  const idxID = headers.indexOf('eventID');
-  const idxEvalR = headers.indexOf('evaluationReady');
-  const idxEvalD = headers.indexOf('evaluationDue');
-  if (idxID < 0) return '';
   const rows = data.slice(1);
   const parts = rows
-    .map(r => {
-      const id = String(r[idxID] || '');
-      const evalR = idxEvalR >= 0 ? String(r[idxEvalR]) : '';
-      const evalD = idxEvalD >= 0 ? String(r[idxEvalD]) : '';
-      return id + '|' + evalR + '|' + evalD;
-    })
+    .map(r => r.map(cell => String(cell ?? '').trim()).join('|'))
     .sort();
   return parts.join(',');
 }
@@ -221,20 +211,27 @@ function markLessonHistory(eventID, flag) {
 }
 
 /**
- * Checks if a lesson event is valid based on its color
+ * Returns lesson status from calendar event color (cancelled/rescheduled) or null for normal lessons.
+ * Graphite (8) = cancelled; Lavender (9), Banana (5) = rescheduled.
  * @param {CalendarEvent} event - Calendar event object
- * @returns {boolean} True if event is a valid lesson
+ * @returns {'cancelled'|'rescheduled'|null}
  */
-function isValidLessonEvent_(event) {
-  // Get the event color
+function getLessonStatus_(event) {
   var color = event.getColor();
-  
-  // Check if the color indicates a cancelled/rescheduled lesson
-  // Graphite (8), Lavender (9), and Banana (5) indicate cancelled/rescheduled events
-  if (color === '8' || color === '9' || color === '5') {
-    return false;
-  }
-  return true;
+  if (color === '8') return 'cancelled';
+  if (color === '9' || color === '5') return 'rescheduled';
+  return null;
+}
+
+/**
+ * Returns location/lesson status for display: cafe, online, or regular (for normal lessons only).
+ * @param {string} title - Event title
+ * @returns {string}
+ */
+function getLessonLocationStatus_(title) {
+  if (/\(\s*Cafe\s*\)/i.test(title)) return 'cafe';
+  if (/\(\s*Online\s*\)/i.test(title)) return 'online';
+  return 'regular';
 }
 
 /**
@@ -258,6 +255,14 @@ function fetchAndCacheTodayLessons(dateOverride) {
   Logger.log('dateOverride value: %s, type: %s', dateOverride, typeof dateOverride);
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const tz = Session.getScriptTimeZone();
+
+  // Fingerprint before we change the sheet (for cache version bump)
+  let beforeFingerprint = '';
+  try {
+    beforeFingerprint = getLessonsTodayFingerprint();
+  } catch (e) {
+    Logger.log('No lessons_today yet, fingerprint empty: ' + e);
+  }
 
   // 1) Read existing statuses (pdfUpload & lessonHistory) from 'lessons_today' sheet
   const oldStatusMap = {};
@@ -333,7 +338,11 @@ function fetchAndCacheTodayLessons(dateOverride) {
   allEvents.forEach(({ event, calendarType }) => {
     const title = event.getTitle();
     if (/break/i.test(title) || /teacher/i.test(title)) return;
-    if (!isValidLessonEvent_(event)) return;
+
+    const lessonStatus = getLessonStatus_(event); // 'cancelled' | 'rescheduled' | null
+    const status = lessonStatus !== null
+      ? lessonStatus
+      : getLessonLocationStatus_(title); // 'cafe' | 'online' | 'regular'
 
     const rawStart = event.getStartTime();
     const rawEnd = event.getEndTime();
@@ -343,18 +352,19 @@ function fetchAndCacheTodayLessons(dateOverride) {
     const names = namePartClean.split(/\s+and\s+/i).map(n => n.trim()).filter(Boolean);
     const cleanNames = names; // Already clean
 
-    // Check for evaluation tags in description
+    // Check for evaluation tags in description (only change color for normal lessons)
     const description = event.getDescription() || '';
     const hasEvaluationReady = description.includes('#evaluationReady');
     const hasEvaluationDue = description.includes('#evaluationDue');
     const teacherMatch = description.match(/#teacher(\w+)/i);
     const teacher = teacherMatch ? teacherMatch[1] : '';
-    
-    // Change event color based on evaluation tags
-    if (hasEvaluationReady) {
-      changeEventColor(event.getId(), 'green');
-    } else if (hasEvaluationDue) {
-      changeEventColor(event.getId(), 'red');
+
+    if (lessonStatus === null) {
+      if (hasEvaluationReady) {
+        changeEventColor(event.getId(), 'green');
+      } else if (hasEvaluationDue) {
+        changeEventColor(event.getId(), 'red');
+      }
     }
 
     // Improved last name detection for students with same last name
@@ -398,7 +408,6 @@ function fetchAndCacheTodayLessons(dateOverride) {
         folderName = cleanStudentName + ' DEMO';
         Logger.log('Demo lesson: event "%s", using temporary folderName "%s" for display', title, folderName);
       }
-      // Add isOnline property: true if title contains (Cafe) or (Online)
       const isOnline = /\(\s*(Cafe|Online)\s*\)/i.test(title);
       flat.push({
         eventID:       event.getId(),
@@ -412,6 +421,7 @@ function fetchAndCacheTodayLessons(dateOverride) {
         evaluationReady: hasEvaluationReady,
         evaluationDue: hasEvaluationDue,
         isOnline:      isOnline,
+        status:        status,
         teacher:       teacher,
         calendarType: calendarType,
       });
@@ -434,6 +444,7 @@ function fetchAndCacheTodayLessons(dateOverride) {
         lessonHistory: item.lessonHistory,
         evaluationReady: item.evaluationReady,
         evaluationDue: item.evaluationDue,
+        status:        item.status,
         teacher:       item.teacher,
         calendarType: item.calendarType,
       };
@@ -480,7 +491,7 @@ function fetchAndCacheTodayLessons(dateOverride) {
   const headers = [
     'eventID', 'eventName', 'Start', 'End',
     'folderName', 'studentNames', 'pdfUpload', 'lessonHistory',
-    'evaluationReady', 'evaluationDue', 'isOnline', 'teacher', 
+    'evaluationReady', 'evaluationDue', 'isOnline', 'status', 'teacher',
     'calendarType'
   ];
   tgt.getRange(1, 1, 1, headers.length).setValues([headers]);
@@ -498,6 +509,7 @@ function fetchAndCacheTodayLessons(dateOverride) {
       l.evaluationReady || false,
       l.evaluationDue || false,
       l.isOnline || false,
+      l.status || 'regular',
       l.teacher || '',
       l.calendarType || ''
     ]);
@@ -505,6 +517,17 @@ function fetchAndCacheTodayLessons(dateOverride) {
     Logger.log('Wrote %s lessons to sheet', out.length);
   } else {
     Logger.log('No lessons to write to sheet');
+  }
+
+  // Bump cache version when data changed so clients refetch
+  const afterFingerprint = getLessonsTodayFingerprint();
+  if (beforeFingerprint !== afterFingerprint) {
+    const appState = getOrCreateAppStateSheet(ss);
+    const current = appState.getRange(2, 1).getValue();
+    const next = (typeof current === 'number' ? current : 0) + 1;
+    appState.getRange(2, 1).setValue(next);
+    appState.getRange(2, 2).setValue(new Date().toISOString());
+    Logger.log('Cache changed, bumped version to ' + next);
   }
 
   Logger.log('--- fetchAndCacheTodayLessons END ---');
@@ -542,84 +565,13 @@ function incrementLessonTypeID(lessonType) {
 }
 
 // Function to create folders and files for students
+// Implementation moved to Legacy.js for reference.
 function createFoldersForStudents(eventName, students) {
-    // try {
-    //   const studentsFolderId = '11KrhsdqEpjUdMMGsNC67WRiS-gG1TAIV'; // Parent folder ID
-    //   const studentsFolder = DriveApp.getFolderById(studentsFolderId);
-
-    //   // Determine lesson type and prefix from event name
-    //   let { type: lessonType, prefix } = determineLessonTypeAndPrefix(eventName);
-    //   // Unify Kids and Kids [Group] as 'Kids'
-    //   if (lessonType === 'Kids' || lessonType === 'Kids [Group]') lessonType = 'Kids';
-
-    //   // Fetch the lesson type ID from the Code sheet
-    //   const spreadsheet = STUDENTLIST;
-    //   const codeSheet = spreadsheet.getSheetByName("Code");
-    //   const codeData = codeSheet.getDataRange().getValues();
-    //   let lessonTypeID = '';
-    //   for (let i = 1; i < codeData.length; i++) {
-    //     let type = codeData[i][0];
-    //     if (type && (type === 'Kids' || type === 'Kids [Group]')) type = 'Kids';
-    //     if (type && type.toString().trim() === lessonType.toString().trim()) {
-    //       lessonTypeID = codeData[i][1];
-    //       break;
-    //     }
-    //   }
-    //   if (!lessonTypeID) {
-    //     Logger.log(`Lesson type ID not found for: ${lessonType}`);
-    //     lessonTypeID = 'UNKNOWN';
-    //   }
-
-    //   // Format the student names: commas + "and" at the end, and remove 子 marker if present
-    //   const cleanStudents = students.map(s => s.replace(/子/g, '').trim());
-    //   const concatenatedNames = formatStudentNames(cleanStudents);
-    //   const folderName = `${prefix}${lessonTypeID} ${concatenatedNames}`;
-
-    //   // Check if folder already exists
-    //   const existingFolders = studentsFolder.getFoldersByName(folderName);
-    //   if (existingFolders.hasNext()) {
-    //       Logger.log(`Folder already exists for group: ${folderName}`);
-    //       return folderName; // Return existing folder name for consistency
-    //   }
-
-    //   // Fetch template IDs from the "Code" sheet
-    //   const lessonNoteDocId = codeSheet.getRange("E2").getValue(); // Document template for lesson note
-    //   const lessonHistorySheetId = codeSheet.getRange("E4").getValue(); // Sheet template for lesson history
-
-    //   if (!lessonNoteDocId || !lessonHistorySheetId) {
-    //       throw new Error("Template file IDs are missing in the 'Code' sheet.");
-    //   }
-
-    //   // Comment out folder creation logic for debugging
-    //   // const groupFolder = studentsFolder.createFolder(folderName);
-    //   // groupFolder.createFolder(`${concatenatedNames}'s Lesson Notes`);
-    //   // groupFolder.createFolder(`${concatenatedNames}'s Evaluation`);
-    //   // const lessonNoteDocTemplate = DriveApp.getFileById(lessonNoteDocId);
-    //   // lessonNoteDocTemplate.makeCopy(`${concatenatedNames}'s Lesson Note`, groupFolder);
-    //   // const lessonHistorySheetTemplate = DriveApp.getFileById(lessonHistorySheetId);
-    //   // const copiedLessonHistorySheet = lessonHistorySheetTemplate.makeCopy(`${concatenatedNames}'s Lesson History`, groupFolder);
-    //   // const copiedSheet = SpreadsheetApp.openById(copiedLessonHistorySheet.getId());
-    //   // const firstSheet = copiedSheet.getSheets()[0];
-    //   // firstSheet.getRange("A1").setValue(`${concatenatedNames}'s`);
-    //   Logger.log(`[DEBUG] Would create folder: ${folderName}`);
-
-    //   Logger.log(`Folders, files, and sheet content updated for group: ${folderName}`);
-
-    //   // Increment the lesson type ID after successful folder creation
-    //   incrementLessonTypeID(lessonType);
-
-    //   // Refresh lessons_today data after folder creation
-    //   fetchAndCacheTodayLessons();
-
-    //   return folderName;
-    // } catch (error) {
-    //   Logger.log(`Error creating folder for group: ${eventName}. Error: ${error.message}`);
-    //   throw error;
-    // }
+  // Stub: see Legacy.js createFoldersForStudents_legacy
 }
 
 function manual() {
-  fetchAndCacheTodayLessons('04/01/2026');
+  fetchAndCacheTodayLessons('17/02/2026');
 }
 
 /**
@@ -628,50 +580,9 @@ function manual() {
  * @param {string} eventName - The name of the demo lesson
  * @returns {string} The created folder name
  */
+// Implementation moved to Legacy.js for reference.
 function createDemoLessonFolder(eventID, eventName) {
-  // try {
-  //   const studentsFolderId = '11KrhsdqEpjUdMMGsNC67WRiS-gG1TAIV'; // Parent folder ID
-  //   const studentsFolder = DriveApp.getFolderById(studentsFolderId);
-
-  //   // Create a folder name from the event name
-  //   const folderName = `Demo - ${eventName}`;
-
-  //   // Check if folder already exists
-  //   const existingFolders = studentsFolder.getFoldersByName(folderName);
-  //   if (existingFolders.hasNext()) {
-  //     Logger.log(`Folder already exists for demo: ${folderName}`);
-  //     return folderName;
-  //   }
-
-  //   // Fetch template IDs from the "Code" sheet
-  //   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  //   const codeSheet = spreadsheet.getSheetByName("Code");
-  //   const lessonNoteDocId = codeSheet.getRange("E2").getValue();
-  //   const lessonHistorySheetId = codeSheet.getRange("E4").getValue();
-
-  //   if (!lessonNoteDocId || !lessonHistorySheetId) {
-  //     throw new Error("Template file IDs are missing in the 'Code' sheet.");
-  //   }
-
-  //   // Comment out folder creation logic for debugging
-  //   const demoFolder = studentsFolder.createFolder(folderName);
-  //   demoFolder.createFolder("Lesson Notes");
-  //   demoFolder.createFolder("Evaluation");
-  //   const lessonNoteDocTemplate = DriveApp.getFileById(lessonNoteDocId);
-  //   lessonNoteDocTemplate.makeCopy("Lesson Note", demoFolder);
-  //   const lessonHistorySheetTemplate = DriveApp.getFileById(lessonHistorySheetId);
-  //   const copiedLessonHistorySheet = lessonHistorySheetTemplate.makeCopy("Lesson History", demoFolder);
-  //   const copiedSheet = SpreadsheetApp.openById(copiedLessonHistorySheet.getId());
-  //   const firstSheet = copiedSheet.getSheets()[0];
-  //   firstSheet.getRange("A1").setValue("Demo Lesson");
-  //   Logger.log(`[DEBUG] Would create demo folder: ${folderName}`);
-
-  //   Logger.log(`Created folder for demo lesson: ${folderName}`);
-  //   return folderName;
-  // } catch (error) {
-  //   Logger.log(`Error creating folder for demo lesson: ${error.message}`);
-  //   throw error;
-  // }
+  // Stub: see Legacy.js createDemoLessonFolder_legacy
 }
 
 /**
@@ -974,6 +885,18 @@ function changeEventColor(eventID, color) {
         Logger.log('Event not found in demo calendar: ' + eventID);
       }
     }
+
+    // If not found in demo calendar, search in owner calendar
+    if (!event) {
+      const calOwner = CalendarApp.getCalendarById(OWNER_CALENDAR_ID);
+      if (calOwner) {
+        try {
+          event = calOwner.getEventById(eventID);
+        } catch (e) {
+          Logger.log('Event not found in owner calendar: ' + eventID);
+        }
+      }
+    }
     
     if (event) {
       event.setColor(color);
@@ -986,29 +909,6 @@ function changeEventColor(eventID, color) {
     Logger.log('Error changing event color: ' + error.message);
     return { success: false, message: error.message };
   }
-}
-
-/**
- * Web method: Given a folderName, returns all student names from the Student List sheet that match it.
- * @param {string} folderName
- * @returns {string[]} Array of student names
- */
-function getStudentNamesByFolder(folderName) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const studentSheet = ss.getSheetByName('Student List');
-  if (!studentSheet) throw new Error('Student List sheet not found');
-  
-  const data = studentSheet.getDataRange().getValues();
-  const names = [];
-  
-  for (let i = 1; i < data.length; i++) {
-    const studentFolder = data[i][3]; // Folder column
-    if (studentFolder === folderName) {
-      names.push(data[i][2]); // Name column
-    }
-  }
-  
-  return names;
 }
 
 /**

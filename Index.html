@@ -1212,18 +1212,53 @@
       margin-right: 2px;
     }
     
-    /* Evaluation Ready Indicator */
+    /* Evaluation Ready Indicator (when inside marker-container, uses static positioning from rule above) */
     .evaluation-ready {
-      position: absolute;
-      top: 4px;
-      right: 4px;
       background: #4caf50;
       color: white;
       padding: 2px 6px;
       border-radius: 3px;
       font-size: 10px;
-      z-index: 10;
       pointer-events: none;
+    }
+
+    /* Status badges (cafe, online, cancelled, rescheduled, regular) */
+    .status-badge {
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 600;
+      pointer-events: none;
+    }
+    .status-badge--cafe {
+      background: #795548;
+      color: #fff;
+    }
+    .status-badge--online {
+      background: #2196f3;
+      color: #fff;
+    }
+    .status-badge--cancelled {
+      background: #9e9e9e;
+      color: #fff;
+    }
+    .status-badge--rescheduled {
+      background: #ff9800;
+      color: #fff;
+    }
+    .status-badge--regular {
+      background: #e0e0e0;
+      color: #616161;
+    }
+
+    /* Cancelled/rescheduled: not clickable */
+    .event-block--non-interactable {
+      pointer-events: none;
+      cursor: default;
+      opacity: 0.75;
+    }
+    .event-block--non-interactable:hover {
+      transform: none;
     }
 
     /* Evaluation Table Styling */
@@ -1304,18 +1339,23 @@
       top: 4px;
       right: 4px;
       display: flex;
-      gap: 6px;           /* whatever spacing you like */
+      flex-wrap: wrap;
+      gap: 6px;
       align-items: center;
       z-index: 10;
+      max-width: 100%;
     }
 
-    /* 2) Child markers become static (in the flex flow) */
+    /* 2) Child markers become static (in the flex flow), don't shrink */
     .marker-container .online-marker,
+    .marker-container .status-badge,
     .marker-container .evaluation-btn,
-    .marker-container .teacher {
-      position: static;   /* <-- remove absolute positioning */
-      top: auto;          /* <-- reset any old top/right */
+    .marker-container .teacher,
+    .marker-container .evaluation-ready {
+      position: static;
+      top: auto;
       right: auto;
+      flex-shrink: 0;
     }
 
     /* 3) Tweak colours, padding, etc. as before */
@@ -2095,10 +2135,10 @@
   
       // Create each card, stamping endMin and blank flags
       placed.forEach(e => {
-        // Debug: Log event object and isOnline property
-        console.log('Event:', e.eventName, 'isOnline:', e.isOnline, e);
+        const status = e.status || 'regular';
+        const isNonInteractable = status === 'cancelled' || status === 'rescheduled';
         const card = document.createElement('div');
-        card.className = `event-block ${e.calendarType}`;
+        card.className = `event-block ${e.calendarType}${isNonInteractable ? ' event-block--non-interactable' : ''}`;
         card.id = e.eventID;
 
         // Position & size
@@ -2126,19 +2166,11 @@
           <div class="lesson-date">${e.Start} – ${e.End}</div>
         `;
 
-        // Add marker container for online and evaluation markers
+        // Add marker container for status and evaluation markers (status badge last = rightmost)
         const markerContainer = document.createElement('div');
         markerContainer.className = 'marker-container';
 
-        // Add online marker if event is online
-        if (e.isOnline) {
-          const onlineDiv = document.createElement('div');
-          onlineDiv.className = 'online-marker';
-          onlineDiv.textContent = 'Online';
-          markerContainer.appendChild(onlineDiv);
-        }
-
-        // Add evaluation button if event has evaluationDue tag
+        // Evaluation button first (leftmost)
         if (e.evaluationDue) {
           const evalBtn = document.createElement('button');
           evalBtn.className = 'evaluation-btn';
@@ -2150,7 +2182,15 @@
           markerContainer.appendChild(evalBtn);
         }
 
-        // Add teacher marker if teacher tag exists
+        // Evaluation ready indicator
+        if (e.evaluationReady) {
+          const evalReady = document.createElement('span');
+          evalReady.className = 'evaluation-ready';
+          evalReady.textContent = 'Evaluation Ready';
+          markerContainer.appendChild(evalReady);
+        }
+
+        // Teacher marker (second from right, right before status badge)
         if (e.teacher) {
           const teacherDiv = document.createElement('div');
           teacherDiv.className = 'teacher';
@@ -2158,30 +2198,33 @@
           markerContainer.appendChild(teacherDiv);
         }
 
+        // Status badge last so it appears rightmost: cafe, online, cancelled, rescheduled, regular
+        const statusLabels = { cafe: 'Cafe', online: 'Online', cancelled: 'Cancelled', rescheduled: 'Rescheduled', regular: 'In person' };
+        if (status && statusLabels[status]) {
+          const statusBadge = document.createElement('span');
+          statusBadge.className = `status-badge status-badge--${status}`;
+          statusBadge.textContent = statusLabels[status];
+          markerContainer.appendChild(statusBadge);
+        }
+
         // Only append the container if it has children
         if (markerContainer.children.length > 0) {
           card.appendChild(markerContainer);
         }
-        
-        // Add evaluation ready indicator if event has evaluationReady tag
-        if (e.evaluationReady) {
-          const evalReady = document.createElement('div');
-          evalReady.className = 'evaluation-ready';
-          evalReady.textContent = 'Evaluation Ready';
-          card.appendChild(evalReady);
+
+        // Click opens modal only for interactable lessons (not cancelled/rescheduled)
+        if (!isNonInteractable) {
+          card.onclick = () => {
+            if (e.folderName && e.folderName.endsWith('DEMO')) {
+              openCreateFolderModal(e);
+            } else {
+              openUploadModal(e.eventID, e.folderName);
+            }
+          };
         }
 
-        // New: On click, open the correct modal
-        card.onclick = () => {
-          if (e.folderName && e.folderName.endsWith('DEMO')) {
-            openCreateFolderModal(e);
-          } else {
-            openUploadModal(e.eventID, e.folderName);
-          }
-        };
-
-        // Track first demo lesson for tooltip
-        if (!firstDemoLessonFound && e.folderName && e.folderName.endsWith('DEMO')) {
+        // Track first demo lesson for tooltip (skip cancelled/rescheduled)
+        if (!firstDemoLessonFound && e.folderName && e.folderName.endsWith('DEMO') && !isNonInteractable) {
           firstDemoLessonFound = true;
           firstDemoCard = card;
         }

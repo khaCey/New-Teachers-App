@@ -121,12 +121,12 @@ function getStudentFolders() {
   const sheet = ss.getSheetByName('Student List');
   if (!sheet) return [];
   
-  // read everything from D2:D<lastRow>
+  // read everything from D2:D(lastRow)
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return [];
   
   const raw = sheet
-    .getRange(2, 4, lastRow - 1, 1)  // col 4 == D
+    .getRange(2, 4, lastRow - 1, 1)  // D2 through D(lastRow)
     .getValues()
     .flat();
   
@@ -148,7 +148,7 @@ function getTeacherList() {
   if (lastRow < 2) return [];
   
   const raw = sheet
-    .getRange(2, 1, lastRow - 1, 1)  // A2:A
+    .getRange(2, 1, lastRow - 1, 1)  // A2 through A(lastRow)
     .getValues()
     .flat();
   
