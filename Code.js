@@ -619,11 +619,7 @@ function createFoldersForStudents(eventName, students) {
 }
 
 function manual() {
-<<<<<<< HEAD
   fetchAndCacheTodayLessons('04/01/2026');
-=======
-  fetchAndCacheTodayLessons('12/01/2026');
->>>>>>> e7f2d60 (Add cache version polling for real-time calendar updates)
 }
 
 /**
