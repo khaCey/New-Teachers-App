@@ -611,15 +611,17 @@
 
     /* Success Actions */
     .success-modal-actions {
-      display: grid;
-      grid-template-columns: 1fr;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       gap: 12px;
       padding: 8px 20px 20px 20px;
     }
 
     @media (min-width: 520px) {
       .success-modal-actions {
-        grid-template-columns: 1fr 1fr;
+        flex-direction: row;
+        justify-content: center;
       }
     }
 
@@ -1453,6 +1455,10 @@
 
       <!-- Actions -->
       <div class="upload-modal-actions">
+        <button id="uploadPDFBtn" onclick="uploadPDF()" class="upload-btn upload-btn-primary">
+          <i data-lucide="upload" class="upload-btn-icon"></i>
+          <span>Upload PDF</span>
+        </button>
         <button id="uploadLessonHistoryBtn" onclick="openLessonHistoryFormFromUpload()" class="upload-btn upload-btn-primary">
           <i data-lucide="sheet" class="upload-btn-icon"></i>
           <span>Upload Lesson History</span>
@@ -1756,10 +1762,6 @@
           <i data-lucide="upload" class="success-btn-icon"></i>
           <span>Upload PDF</span>
         </button>
-        <button onclick="closeLessonHistorySuccessModal()" class="success-btn success-btn-secondary">
-          <i data-lucide="check-line" class="success-btn-icon"></i>
-          <span>Done</span>
-        </button>
       </div>
     </div>
   </div>
@@ -1945,11 +1947,18 @@
           pollLessonStatuses();
           renderCalendarView(events);
           renderCurrentTimeLine();
-          // then every minute, refresh both statuses AND the clock line:
+          // Get initial cache version for change detection
+          google.script.run
+            .withSuccessHandler(v => { lastSeenCacheVersion = v.version; })
+            .withFailureHandler(() => {})
+            .getCacheVersion();
+          // Every minute: refresh statuses and clock line
           setInterval(() => {
             pollLessonStatuses();
             renderCurrentTimeLine();
           }, 60_000);
+          // Every 45 seconds: check if calendar data changed (cancelled lessons, evaluation badges)
+          setInterval(pollCacheVersionAndRefreshIfChanged, 45_000);
         })
         .withFailureHandler(err => {
           hideLoading();
@@ -2232,9 +2241,22 @@
       const hist   = (card.dataset.lessonHistory || '').toLowerCase() === 'true';
   
       card.classList.remove('uploaded','history','complete');
-      if (nowMin > endMin && !pdf)      card.classList.add('uploaded');
-      else if (pdf && !hist)            card.classList.add('history');
-      else if (pdf && hist)             card.classList.add('complete');
+      
+      // Only apply status colors to lessons that have finished
+      if (nowMin > endMin) {
+        // Red: Neither PDF nor lesson history done
+        if (!pdf && !hist) {
+          card.classList.add('uploaded');
+        }
+        // Orange: One or the other done (but not both)
+        else if ((pdf && !hist) || (!pdf && hist)) {
+          card.classList.add('history');
+        }
+        // Green: Both PDF and lesson history done
+        else if (pdf && hist) {
+          card.classList.add('complete');
+        }
+      }
     }
   
     // Fetch the latest pdfUpload & lessonHistory flags every minute
@@ -2269,6 +2291,32 @@
   
     // === PDF‐upload / Modal logic ===
     let selectedEventID = null;
+    let lastSeenCacheVersion = 0;
+
+    function pollCacheVersionAndRefreshIfChanged() {
+      google.script.run
+        .withSuccessHandler(v => {
+          if (v.version > lastSeenCacheVersion) {
+            lastSeenCacheVersion = v.version;
+            google.script.run
+              .withSuccessHandler(json => {
+                let events;
+                try {
+                  events = typeof json === 'string' ? JSON.parse(json) : json;
+                } catch {
+                  return;
+                }
+                pollLessonStatuses();
+                renderCalendarView(events);
+                renderCurrentTimeLine();
+              })
+              .withFailureHandler(err => console.error(err))
+              .getEventsJson();
+          }
+        })
+        .withFailureHandler(err => console.error(err))
+        .getCacheVersion();
+    }
   
     function openUploadModal(eventID, folderName) {
       selectedEventID = eventID;
@@ -2439,7 +2487,7 @@
       
       // Determine which button to use for loading state
       if (document.getElementById('uploadModal').classList.contains('show')) {
-        btn = document.getElementById('uploadLessonHistoryBtn');
+        btn = document.getElementById('uploadPDFBtn');
       } else if (document.getElementById('editLessonModal').classList.contains('show')) {
         btn = document.getElementById('uploadPDFButton');
       } else {
@@ -2737,9 +2785,35 @@
     function createEventBlock(event) {
       const card = document.createElement('div');
       card.className = `event-block ${e.calendarType}`;
-      if (event.pdfUpload) card.classList.add('uploaded');
-      if (event.lessonHistory) card.classList.add('history');
-      if (event.pdfUpload && event.lessonHistory) card.classList.add('complete');
+      
+      const pdf = event.pdfUpload || false;
+      const hist = event.lessonHistory || false;
+      
+      // Check if lesson has ended (parse End time like "HH:mm")
+      let lessonEnded = false;
+      if (event.End) {
+        const [endHour, endMin] = event.End.split(':').map(Number);
+        const endMinTotal = endHour * 60 + endMin;
+        const now = new Date();
+        const nowMinTotal = now.getHours() * 60 + now.getMinutes();
+        lessonEnded = nowMinTotal > endMinTotal;
+      }
+      
+      // Only apply status colors to lessons that have finished
+      if (lessonEnded) {
+        // Red: Neither PDF nor lesson history done
+        if (!pdf && !hist) {
+          card.classList.add('uploaded');
+        }
+        // Orange: One or the other done (but not both)
+        else if ((pdf && !hist) || (!pdf && hist)) {
+          card.classList.add('history');
+        }
+        // Green: Both PDF and lesson history done
+        else if (pdf && hist) {
+          card.classList.add('complete');
+        }
+      }
 
       // Add event name
       const nameDiv = document.createElement('div');

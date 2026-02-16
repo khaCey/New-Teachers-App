@@ -4,6 +4,23 @@ const CALENDAR_ID = 'greensquare.jp_h8u0oufn8feana384v67o46o78@group.calendar.go
 const DEMO_CALENDAR_ID = 'greensquare.jp_1m1bhvfu9mtts7gq9s9jsj9kbk@group.calendar.google.com';
 const OWNER_CALENDAR_ID = 'c_403306dccf2039f61a620a4cfc22424c5a6f79e945054e57f30ecc50c90b9207@group.calendar.google.com';
 
+const APPSTATE_SHEET_NAME = 'AppState';
+
+/**
+ * Returns the AppState sheet, creating it with headers and initial cacheVersion if it doesn't exist.
+ * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} ss - The spreadsheet (e.g. getActiveSpreadsheet()).
+ * @returns {GoogleAppsScript.Spreadsheet.Sheet}
+ */
+function getOrCreateAppStateSheet(ss) {
+  let sheet = ss.getSheetByName(APPSTATE_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(APPSTATE_SHEET_NAME);
+    sheet.getRange(1, 1, 1, 2).setValues([['cacheVersion', 'lastUpdated']]);
+    sheet.getRange(2, 1).setValue(0);
+  }
+  return sheet;
+}
+
 /** Web app entry point */
 function doGet() {
   return HtmlService
@@ -42,6 +59,87 @@ function getEventsJson() {
 
   Logger.log(`getEventsJson() → ${rows.length} rows`);
   return JSON.stringify(rows);
+}
+
+/**
+ * Returns the current cache version for client polling. Creates the AppState sheet if it doesn't exist.
+ * @returns {{ version: number }}
+ */
+function getCacheVersion() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = getOrCreateAppStateSheet(ss);
+  const version = sheet.getRange(2, 1).getValue();
+  return { version: typeof version === 'number' ? version : 0 };
+}
+
+/**
+ * Computes a fingerprint of lessons_today for change detection.
+ * Returns a string that changes when events are added/removed or evaluation flags change.
+ * @returns {string}
+ */
+function getLessonsTodayFingerprint() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('lessons_today');
+  if (!sheet) return '';
+  const data = sheet.getDataRange().getValues();
+  if (data.length < 2) return '';
+  const headers = data[0].map(h => String(h).trim());
+  const idxID = headers.indexOf('eventID');
+  const idxEvalR = headers.indexOf('evaluationReady');
+  const idxEvalD = headers.indexOf('evaluationDue');
+  if (idxID < 0) return '';
+  const rows = data.slice(1);
+  const parts = rows
+    .map(r => {
+      const id = String(r[idxID] || '');
+      const evalR = idxEvalR >= 0 ? String(r[idxEvalR]) : '';
+      const evalD = idxEvalD >= 0 ? String(r[idxEvalD]) : '';
+      return id + '|' + evalR + '|' + evalD;
+    })
+    .sort();
+  return parts.join(',');
+}
+
+/**
+ * Scheduled job: refreshes lessons from Calendar, compares before/after, bumps cache version if changed.
+ * Run this every 15 minutes via a time-driven trigger. Use createScheduledLessonCacheTrigger() once to set up.
+ */
+function scheduledLessonCacheUpdate() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let beforeFingerprint = '';
+  try {
+    beforeFingerprint = getLessonsTodayFingerprint();
+  } catch (e) {
+    Logger.log('No lessons_today yet, fingerprint empty: ' + e);
+  }
+  fetchAndCacheTodayLessons();
+  const afterFingerprint = getLessonsTodayFingerprint();
+  if (beforeFingerprint !== afterFingerprint) {
+    const appState = getOrCreateAppStateSheet(ss);
+    const current = appState.getRange(2, 1).getValue();
+    const next = (typeof current === 'number' ? current : 0) + 1;
+    appState.getRange(2, 1).setValue(next);
+    appState.getRange(2, 2).setValue(new Date().toISOString());
+    Logger.log('Cache changed, bumped version to ' + next);
+  }
+}
+
+/**
+ * Run this ONCE from the script editor to create a 15-minute trigger for scheduledLessonCacheUpdate.
+ * (Triggers > Add trigger > or run this function manually)
+ */
+function createScheduledLessonCacheTrigger() {
+  const triggers = ScriptApp.getProjectTriggers();
+  triggers.forEach(t => {
+    if (t.getHandlerFunction() === 'scheduledLessonCacheUpdate') {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+  ScriptApp.newTrigger('scheduledLessonCacheUpdate')
+    .timeBased()
+    .everyMinutes(15)
+    .create();
+  Logger.log('Created 15-minute trigger for scheduledLessonCacheUpdate');
 }
 
 /**
@@ -521,7 +619,11 @@ function createFoldersForStudents(eventName, students) {
 }
 
 function manual() {
+<<<<<<< HEAD
   fetchAndCacheTodayLessons('04/01/2026');
+=======
+  fetchAndCacheTodayLessons('12/01/2026');
+>>>>>>> e7f2d60 (Add cache version polling for real-time calendar updates)
 }
 
 /**

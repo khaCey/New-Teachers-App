@@ -124,6 +124,16 @@ This application provides a comprehensive dashboard for teachers to:
 - Google Drive with organized folder structure
 - Google Calendar with lesson events
 
+### Cache Version & Auto-Refresh
+
+The app polls a cache version to detect when calendar data changes (cancelled lessons, evaluation badges). To enable 15-minute auto-refresh from Calendar:
+
+1. Open the Apps Script editor
+2. Run `createScheduledLessonCacheTrigger()` once (Run > select function > Run)
+3. Authorize if prompted
+
+This creates a time-driven trigger that runs every 15 minutes, refreshes lessons from Calendar, and bumps the version when data changes. The client polls every 45 seconds and refetches the calendar when the version changes.
+
 ### Configuration Files
 
 #### `appsscript.json`
