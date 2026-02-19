@@ -2,6 +2,117 @@
 
 All notable changes to the New Teachers App will be documented in this file.
 
+## v.0.0.38.00 — Production Release
+Date: 2026-01-26
+Type: Production
+
+### Release Summary
+- Evaluation tags: #evaluationReady and #evaluationDone equivalent, "Give Evaluation" indicator
+- No longer modifies Google Calendar event colors when reading
+- Status colors override demo/owner styling when lesson ended
+
+---
+
+## v.0.0.37.05 — Development
+Date: 2026-01-26
+Type: Dev Change
+
+### Summary
+- Evaluation ready/done indicator label: Give Evaluation
+
+### Changes (detailed)
+
+#### Changed
+- Index.html
+  - evaluationReady indicator text
+    - From: "Evaluation Done"
+    - To: "Give Evaluation"
+
+---
+
+## v.0.0.37.04 — Development
+Date: 2026-01-26
+Type: Dev Change
+
+### Summary
+- Stop modifying Google Calendar event colors when reading; #evaluationReady and #evaluationDone treated as equivalent
+
+### Changes (detailed)
+
+#### Changed
+- Code.js
+  - fetchAndCacheTodayLessons()
+    - From: Called changeEventColor() on events with evaluation tags (red/green/gray)
+    - To: No longer modifies Google Calendar; only reads tags for app display
+  - hasEvaluationReady
+    - From: Only #evaluationReady
+    - To: #evaluationReady OR #evaluationDone (equivalent)
+  - Removed: hasEvaluationDone, evaluationDone from flat/grouped/sheet
+- Index.html
+  - evaluationReady indicator
+    - From: "Give Evaluation" for #evaluationReady, separate "Evaluation Done" for #evaluationDone
+    - To: Single "Evaluation Done" indicator for both tags
+  - Removed: .evaluation-done CSS, evaluation-done marker
+
+---
+
+## v.0.0.37.03 — Development
+Date: 2026-01-26
+Type: Dev Change
+
+### Summary
+- Added #evaluationDone tag support alongside #evaluationReady and #evaluationDue
+
+### Changes (detailed)
+
+#### Added
+- Code.js
+  - hasEvaluationDone from #evaluationDone in event description
+  - evaluationDone in flat items, grouped lessons, lessons_today sheet
+  - changeEventColor: gray for evaluationDone (takes precedence over ready/due)
+- Index.html
+  - .evaluation-done CSS (grey indicator)
+  - Evaluation Done indicator on cards when e.evaluationDone
+
+---
+
+## v.0.0.37.02 — Development
+Date: 2026-01-26
+Type: Dev Change
+
+### Summary
+- Status colors now override demo/owner styling when lesson has ended
+
+### Changes (detailed)
+
+#### Fixed
+- Index.html
+  - .event-block.danger, .event-block.caution, .event-block.safe
+    - From: Defined before .event-block.demo and .event-block.owner; demo/owner overrode status colors (cards stayed blue/dark when pdf+history complete)
+    - To: Status rules moved after demo/owner so danger/caution/safe override; demo/owner lessons now show correct green/orange/red when ended
+
+---
+
+## v.0.0.37.01 — Development
+Date: 2026-01-26
+Type: Dev Change
+
+### Summary
+- Status classes renamed to danger/caution/safe; instant color update after actions
+
+### Changes (detailed)
+
+#### Changed
+- Index.html
+  - .event-block.uploaded/history/complete
+    - From: uploaded, history, complete
+    - To: danger, caution, safe
+  - PDF upload & lesson history success handlers
+    - From: Manual classList, waited for poll
+    - To: Update dataset + updateSingleCardStatus for instant color change
+
+---
+
 ## v.0.0.37.00 — Production Release
 Date: 2026-01-26
 Type: Production
