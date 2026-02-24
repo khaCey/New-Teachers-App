@@ -94,6 +94,12 @@
       background:   #e1f5fe;
       z-index: 1000;
     }
+    .event-block.uploaded { border-left-color: #D32F2F; background: #FFCDD2; }
+    .event-block.uploaded:hover { border-left-color: #B71C1C; background: #FF8A80; }
+    .event-block.history  { border-left-color: #FFA000; background: #FFF8E1; }
+    .event-block.history:hover { border-left-color: #FF6F00; background: #FFE082; }
+    .event-block.complete { border-left-color: #388E3C; background: #C8E6C9	; }
+    .event-block.complete:hover { border-left-color: #2E7D32; background: #A5D6A7; }
     .lesson-folder { font-weight:700; }
     
     /* Demo lessons */
@@ -109,13 +115,6 @@
       color: #ffffff;
     }
 
-    /* Status colors - must come after demo/owner so they override */
-    .event-block.danger { border-left-color: #D32F2F; background: #FFCDD2; }
-    .event-block.danger:hover { border-left-color: #B71C1C; background: #FF8A80; }
-    .event-block.caution { border-left-color: #FFA000; background: #FFF8E1; }
-    .event-block.caution:hover { border-left-color: #FF6F00; background: #FFE082; }
-    .event-block.safe { border-left-color: #388E3C; background: #C8E6C9; }
-    .event-block.safe:hover { border-left-color: #2E7D32; background: #A5D6A7; }
 
     /* FeatureNudge tooltip styles */
     .fnudge { 
@@ -181,7 +180,7 @@
     /* loading */
     #loading {
       display:none; position:fixed; top:0; left:0; width:100%; height:100%;
-      background:rgba(255,255,255,0.8); justify-content:center; align-items:center; z-index:100000;
+      background:rgba(255,255,255,0.8); justify-content:center; align-items:center; z-index:1000;
     }
     #loading.visible { display:flex; }
     #loading span {
@@ -466,51 +465,6 @@
 
     .upload-btn-secondary:hover {
       background: #2563eb !important;
-    }
-
-    .upload-modal-actions-top-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      width: 100%;
-    }
-
-    .upload-btn-compact {
-      width: auto !important;
-      justify-content: flex-start !important;
-      padding: 8px 14px !important;
-      font-size: 13px !important;
-    }
-
-    .upload-btn-pdf {
-      background: #D32F2F !important;
-      color: white !important;
-    }
-
-    .upload-btn-pdf:hover {
-      background: #B71C1C !important;
-    }
-
-    .upload-btn-open-folder {
-      width: auto !important;
-      padding: 8px 14px !important;
-      font-size: 13px !important;
-      background: #64748b !important;
-      color: white !important;
-    }
-
-    .upload-btn-open-folder:hover {
-      background: #475569 !important;
-    }
-
-    .upload-btn-write-history {
-      background: #d97706 !important;
-      color: white !important;
-    }
-
-    .upload-btn-write-history:hover {
-      background: #b45309 !important;
     }
 
     .upload-btn-icon {
@@ -1258,53 +1212,18 @@
       margin-right: 2px;
     }
     
-    /* Evaluation Ready Indicator (when inside marker-container, uses static positioning from rule above) */
+    /* Evaluation Ready Indicator */
     .evaluation-ready {
+      position: absolute;
+      top: 4px;
+      right: 4px;
       background: #4caf50;
       color: white;
       padding: 2px 6px;
       border-radius: 3px;
       font-size: 10px;
+      z-index: 10;
       pointer-events: none;
-    }
-
-    /* Status badges (cafe, online, cancelled, rescheduled, regular) */
-    .status-badge {
-      padding: 2px 6px;
-      border-radius: 3px;
-      font-size: 10px;
-      font-weight: 600;
-      pointer-events: none;
-    }
-    .status-badge--cafe {
-      background: #795548;
-      color: #fff;
-    }
-    .status-badge--online {
-      background: #2196f3;
-      color: #fff;
-    }
-    .status-badge--cancelled {
-      background: #9e9e9e;
-      color: #fff;
-    }
-    .status-badge--rescheduled {
-      background: #ff9800;
-      color: #fff;
-    }
-    .status-badge--regular {
-      background: #e0e0e0;
-      color: #616161;
-    }
-
-    /* Cancelled/rescheduled: not clickable */
-    .event-block--non-interactable {
-      pointer-events: none;
-      cursor: default;
-      opacity: 0.75;
-    }
-    .event-block--non-interactable:hover {
-      transform: none;
     }
 
     /* Evaluation Table Styling */
@@ -1385,23 +1304,18 @@
       top: 4px;
       right: 4px;
       display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
+      gap: 6px;           /* whatever spacing you like */
       align-items: center;
       z-index: 10;
-      max-width: 100%;
     }
 
-    /* 2) Child markers become static (in the flex flow), don't shrink */
+    /* 2) Child markers become static (in the flex flow) */
     .marker-container .online-marker,
-    .marker-container .status-badge,
     .marker-container .evaluation-btn,
-    .marker-container .teacher,
-    .marker-container .evaluation-ready {
-      position: static;
-      top: auto;
+    .marker-container .teacher {
+      position: static;   /* <-- remove absolute positioning */
+      top: auto;          /* <-- reset any old top/right */
       right: auto;
-      flex-shrink: 0;
     }
 
     /* 3) Tweak colours, padding, etc. as before */
@@ -1541,23 +1455,17 @@
 
       <!-- Actions -->
       <div class="upload-modal-actions">
-        <div class="upload-modal-actions-top-row">
-          <button id="uploadPDFBtn" onclick="uploadPDF()" class="upload-btn upload-btn-compact upload-btn-pdf">
-            <i data-lucide="upload" class="upload-btn-icon"></i>
-            <span>Upload PDF</span>
-          </button>
-          <button id="openStudentFolderBtn" onclick="openStudentFolder()" class="upload-btn upload-btn-open-folder">
-            <i data-lucide="folder-open" class="upload-btn-icon"></i>
-            <span>Open Student Folder</span>
-          </button>
-        </div>
-        <button id="uploadLessonHistoryBtn" onclick="openLessonHistoryFormFromUpload()" class="upload-btn upload-btn-write-history">
+        <button id="uploadPDFBtn" onclick="uploadPDF()" class="upload-btn upload-btn-primary">
+          <i data-lucide="upload" class="upload-btn-icon"></i>
+          <span>Upload PDF</span>
+        </button>
+        <button id="uploadLessonHistoryBtn" onclick="openLessonHistoryFormFromUpload()" class="upload-btn upload-btn-primary">
           <i data-lucide="sheet" class="upload-btn-icon"></i>
-          <span>Write Lesson History</span>
+          <span>Upload Lesson History</span>
         </button>
         <button id="lessonNotesBtn" onclick="openLessonNotes()" class="upload-btn upload-btn-secondary">
           <i data-lucide="file-text" class="upload-btn-icon"></i>
-          <span>Lesson Note</span>
+          <span>Lesson Notes</span>
         </button>
         <button id="lessonHistoryBtn" onclick="openLessonHistory()" class="upload-btn upload-btn-primary">
           <i data-lucide="sheet" class="upload-btn-icon"></i>
@@ -2039,18 +1947,11 @@
           pollLessonStatuses();
           renderCalendarView(events);
           renderCurrentTimeLine();
-          // Get initial cache version for change detection
-          google.script.run
-            .withSuccessHandler(v => { lastSeenCacheVersion = v.version; })
-            .withFailureHandler(() => {})
-            .getCacheVersion();
-          // Every minute: refresh statuses and clock line
+          // then every minute, refresh both statuses AND the clock line:
           setInterval(() => {
             pollLessonStatuses();
             renderCurrentTimeLine();
           }, 60_000);
-          // Every 45 seconds: check if calendar data changed (cancelled lessons, evaluation badges)
-          setInterval(pollCacheVersionAndRefreshIfChanged, 45_000);
         })
         .withFailureHandler(err => {
           hideLoading();
@@ -2187,10 +2088,10 @@
   
       // Create each card, stamping endMin and blank flags
       placed.forEach(e => {
-        const status = e.status || 'regular';
-        const isNonInteractable = status === 'cancelled' || status === 'rescheduled';
+        // Debug: Log event object and isOnline property
+        console.log('Event:', e.eventName, 'isOnline:', e.isOnline, e);
         const card = document.createElement('div');
-        card.className = `event-block ${e.calendarType}${isNonInteractable ? ' event-block--non-interactable' : ''}`;
+        card.className = `event-block ${e.calendarType}`;
         card.id = e.eventID;
 
         // Position & size
@@ -2218,15 +2119,23 @@
           <div class="lesson-date">${e.Start} – ${e.End}</div>
         `;
 
-        // Add marker container for status and evaluation markers (status badge last = rightmost)
+        // Add marker container for online and evaluation markers
         const markerContainer = document.createElement('div');
         markerContainer.className = 'marker-container';
 
-        // Evaluation button first (leftmost)
+        // Add online marker if event is online
+        if (e.isOnline) {
+          const onlineDiv = document.createElement('div');
+          onlineDiv.className = 'online-marker';
+          onlineDiv.textContent = 'Online';
+          markerContainer.appendChild(onlineDiv);
+        }
+
+        // Add evaluation button if event has evaluationDue tag
         if (e.evaluationDue) {
           const evalBtn = document.createElement('button');
           evalBtn.className = 'evaluation-btn';
-          evalBtn.textContent = 'Write Evaluation';
+          evalBtn.textContent = 'Evaluation Due';
           evalBtn.onclick = (event) => {
             event.stopPropagation();
             openEvaluationModal(e);
@@ -2234,15 +2143,7 @@
           markerContainer.appendChild(evalBtn);
         }
 
-        // Evaluation ready/done indicator (#evaluationReady and #evaluationDone are equivalent)
-        if (e.evaluationReady) {
-          const evalReady = document.createElement('span');
-          evalReady.className = 'evaluation-ready';
-          evalReady.textContent = 'Give Evaluation';
-          markerContainer.appendChild(evalReady);
-        }
-
-        // Teacher marker (second from right, right before status badge)
+        // Add teacher marker if teacher tag exists
         if (e.teacher) {
           const teacherDiv = document.createElement('div');
           teacherDiv.className = 'teacher';
@@ -2250,34 +2151,30 @@
           markerContainer.appendChild(teacherDiv);
         }
 
-        // Status badge last so it appears rightmost: cafe, online (no in-person; regular = Online)
-        const statusLabels = { cafe: 'Cafe', online: 'Online', cancelled: 'Cancelled', rescheduled: 'Rescheduled', regular: 'Online' };
-        if (status && statusLabels[status]) {
-          const statusBadge = document.createElement('span');
-          const badgeStatus = status === 'regular' ? 'online' : status; // regular displays as Online
-          statusBadge.className = `status-badge status-badge--${badgeStatus}`;
-          statusBadge.textContent = statusLabels[status];
-          markerContainer.appendChild(statusBadge);
-        }
-
         // Only append the container if it has children
         if (markerContainer.children.length > 0) {
           card.appendChild(markerContainer);
         }
-
-        // Click opens modal only for interactable lessons (not cancelled/rescheduled)
-        if (!isNonInteractable) {
-          card.onclick = () => {
-            if (e.folderName && e.folderName.endsWith('DEMO')) {
-              openCreateFolderModal(e);
-            } else {
-              openUploadModal(e.eventID, e.folderName);
-            }
-          };
+        
+        // Add evaluation ready indicator if event has evaluationReady tag
+        if (e.evaluationReady) {
+          const evalReady = document.createElement('div');
+          evalReady.className = 'evaluation-ready';
+          evalReady.textContent = 'Evaluation Ready';
+          card.appendChild(evalReady);
         }
 
-        // Track first demo lesson for tooltip (skip cancelled/rescheduled)
-        if (!firstDemoLessonFound && e.folderName && e.folderName.endsWith('DEMO') && !isNonInteractable) {
+        // New: On click, open the correct modal
+        card.onclick = () => {
+          if (e.folderName && e.folderName.endsWith('DEMO')) {
+            openCreateFolderModal(e);
+          } else {
+            openUploadModal(e.eventID, e.folderName);
+          }
+        };
+
+        // Track first demo lesson for tooltip
+        if (!firstDemoLessonFound && e.folderName && e.folderName.endsWith('DEMO')) {
           firstDemoLessonFound = true;
           firstDemoCard = card;
         }
@@ -2336,18 +2233,21 @@
       const pdf    = (card.dataset.pdfUpload   || '').toLowerCase() === 'true';
       const hist   = (card.dataset.lessonHistory || '').toLowerCase() === 'true';
   
-      card.classList.remove('danger','caution','safe');
+      card.classList.remove('uploaded','history','complete');
       
       // Only apply status colors to lessons that have finished
       if (nowMin > endMin) {
+        // Red: Neither PDF nor lesson history done
         if (!pdf && !hist) {
-          card.classList.add('danger');
+          card.classList.add('uploaded');
         }
+        // Orange: One or the other done (but not both)
         else if ((pdf && !hist) || (!pdf && hist)) {
-          card.classList.add('caution');
+          card.classList.add('history');
         }
+        // Green: Both PDF and lesson history done
         else if (pdf && hist) {
-          card.classList.add('safe');
+          card.classList.add('complete');
         }
       }
     }
@@ -2384,32 +2284,6 @@
   
     // === PDF‐upload / Modal logic ===
     let selectedEventID = null;
-    let lastSeenCacheVersion = 0;
-
-    function pollCacheVersionAndRefreshIfChanged() {
-      google.script.run
-        .withSuccessHandler(v => {
-          if (v.version > lastSeenCacheVersion) {
-            lastSeenCacheVersion = v.version;
-            google.script.run
-              .withSuccessHandler(json => {
-                let events;
-                try {
-                  events = typeof json === 'string' ? JSON.parse(json) : json;
-                } catch {
-                  return;
-                }
-                pollLessonStatuses();
-                renderCalendarView(events);
-                renderCurrentTimeLine();
-              })
-              .withFailureHandler(err => console.error(err))
-              .getEventsJson();
-          }
-        })
-        .withFailureHandler(err => console.error(err))
-        .getCacheVersion();
-    }
   
     function openUploadModal(eventID, folderName) {
       selectedEventID = eventID;
@@ -2420,7 +2294,7 @@
       const dateInput = document.getElementById('date');
       dateInput.valueAsDate = new Date();
 
-      // Always start with "Write Lesson History" button when modal first opens
+      // Always start with "Upload Lesson History" button when modal first opens
       // The button will only change to "Upload PDF" after lesson history is submitted
       updateUploadModalButton(false);
 
@@ -2429,26 +2303,22 @@
       document.getElementById('successModal').classList.remove('show');
     }
 
-    // Function to update the upload modal button based on lesson history status (for goToUploadForm flow)
+    // Function to update the upload modal button based on lesson history status
     function updateUploadModalButton(lessonHistoryDone) {
-      // No toggle needed - both Upload PDF and Write Lesson History are always visible
-    }
-
-    function openStudentFolder() {
-      const folderName = document.getElementById('hiddenFolderName').value;
-      if (!folderName) return alert('No folder selected.');
-      showLoading();
-      google.script.run
-        .withSuccessHandler(r => {
-          hideLoading();
-          if (r && r.url) window.open(r.url, '_blank');
-          else alert('Folder not found. It may not exist yet (e.g. demo lessons).');
-        })
-        .withFailureHandler(err => {
-          hideLoading();
-          alert('Error: ' + err.message);
-        })
-        .getStudentFolderUrl(folderName);
+      const btn = document.getElementById('uploadLessonHistoryBtn');
+      if (!btn) return;
+      
+      if (lessonHistoryDone) {
+        // Lesson history is done, show "Upload PDF" button
+        btn.onclick = uploadPDF;
+        btn.innerHTML = '<i data-lucide="upload" class="upload-btn-icon"></i><span>Upload PDF</span>';
+        lucide.createIcons();
+      } else {
+        // Lesson history not done, show "Upload Lesson History" button
+        btn.onclick = openLessonHistoryFormFromUpload;
+        btn.innerHTML = '<i data-lucide="sheet" class="upload-btn-icon"></i><span>Upload Lesson History</span>';
+        lucide.createIcons();
+      }
     }
 
     // Function to open lesson history form from upload modal
@@ -2621,8 +2491,8 @@
           // c) Recolor the card immediately
           const card = document.getElementById(selectedEventID);
           if (card) {
-            card.dataset.pdfUpload = 'true';
-            updateSingleCardStatus(card);
+            card.classList.add('uploaded');
+            card.classList.remove('history','complete');
           }
 
           // d) Keep upload modal open briefly to show completion, then close and show PDF success modal
@@ -2781,11 +2651,13 @@
             statuses[selectedEventID].lessonHistory = true;
             localStorage.setItem('dashboardStatuses', JSON.stringify(statuses));
 
-            // 2) Update the card's data-attributes and CSS immediately
+            // 2) Update the card's data-attributes and CSS
             const card = document.getElementById(selectedEventID);
             if (card) {
               card.dataset.lessonHistory = 'true';
               updateSingleCardStatus(card);
+              card.classList.remove('uploaded', 'history');
+              card.classList.add('complete');
             }
 
             // 3) Update upload modal button if modal is open
@@ -2896,14 +2768,17 @@
       
       // Only apply status colors to lessons that have finished
       if (lessonEnded) {
+        // Red: Neither PDF nor lesson history done
         if (!pdf && !hist) {
-          card.classList.add('danger');
+          card.classList.add('uploaded');
         }
+        // Orange: One or the other done (but not both)
         else if ((pdf && !hist) || (!pdf && hist)) {
-          card.classList.add('caution');
+          card.classList.add('history');
         }
+        // Green: Both PDF and lesson history done
         else if (pdf && hist) {
-          card.classList.add('safe');
+          card.classList.add('complete');
         }
       }
 
@@ -3675,9 +3550,12 @@
               
               // Update the card's data-attributes and CSS immediately
               const card = document.getElementById(selectedEventID);
+              console.log('Card found:', card);
               if (card) {
                 card.dataset.lessonHistory = 'true';
                 updateSingleCardStatus(card);
+                card.classList.remove('uploaded', 'history');
+                card.classList.add('complete');
               }
               
               // Close all modals and show calendar bare

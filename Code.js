@@ -361,9 +361,9 @@ function fetchAndCacheTodayLessons(dateOverride) {
     const names = namePartClean.split(/\s+and\s+/i).map(n => n.trim()).filter(Boolean);
     const cleanNames = names; // Already clean
 
-    // Check for evaluation tags in description (only change color for normal lessons)
+    // Check for evaluation tags in description (#evaluationReady and #evaluationDone are equivalent)
     const description = event.getDescription() || '';
-    let hasEvaluationReady = description.includes('#evaluationReady');
+    let hasEvaluationReady = description.includes('#evaluationReady') || description.includes('#evaluationDone');
     let hasEvaluationDue = description.includes('#evaluationDue');
     // If AppState B5 is true: title "x/y" with y-x===1 (penultimate lesson) => evaluation due
     const fractionMatch = title.match(/(\d+)\s*\/\s*(\d+)/);
@@ -374,14 +374,6 @@ function fetchAndCacheTodayLessons(dateOverride) {
     }
     const teacherMatch = description.match(/#teacher(\w+)/i);
     const teacher = teacherMatch ? teacherMatch[1] : '';
-
-    if (lessonStatus === null) {
-      if (hasEvaluationReady) {
-        changeEventColor(event.getId(), 'green');
-      } else if (hasEvaluationDue) {
-        changeEventColor(event.getId(), 'red');
-      }
-    }
 
     // Improved last name detection for students with same last name
     let sharedLastName = '';
@@ -858,6 +850,23 @@ function getStudentLinks(folderName) {
   } catch (e) {
     Logger.log(`Error in getStudentLinks for folder "${folderName}": ${e.toString()}`);
     return { error: e.toString() };
+  }
+}
+
+/**
+ * Returns the Google Drive folder URL for a student folder by name.
+ * Returns null for demo lessons (folder not created yet) or if not found.
+ * @param {string} folderName - The folder name (e.g. "053 Khacey Salvador")
+ * @returns {{ url: string }|null}
+ */
+function getStudentFolderUrl(folderName) {
+  if (!folderName || String(folderName).trim().endsWith('DEMO')) return null;
+  try {
+    const folder = findStudentFolder(String(folderName).trim());
+    return folder ? { url: folder.getUrl() } : null;
+  } catch (e) {
+    Logger.log('getStudentFolderUrl error: ' + e);
+    return null;
   }
 }
 
