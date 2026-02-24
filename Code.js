@@ -224,14 +224,13 @@ function getLessonStatus_(event) {
 }
 
 /**
- * Returns location/lesson status for display: cafe, online, or regular (for normal lessons only).
+ * Returns location/lesson status for display: cafe or online (no in-person; non-cafe = online).
  * @param {string} title - Event title
- * @returns {string}
+ * @returns {string} 'cafe' | 'online'
  */
 function getLessonLocationStatus_(title) {
   if (/\(\s*Cafe\s*\)/i.test(title)) return 'cafe';
-  if (/\(\s*Online\s*\)/i.test(title)) return 'online';
-  return 'regular';
+  return 'online'; // Online if not cafe (no in-person option)
 }
 
 /**
@@ -352,7 +351,7 @@ function fetchAndCacheTodayLessons(dateOverride) {
     const lessonStatus = getLessonStatus_(event); // 'cancelled' | 'rescheduled' | null
     const status = lessonStatus !== null
       ? lessonStatus
-      : getLessonLocationStatus_(title); // 'cafe' | 'online' | 'regular'
+      : getLessonLocationStatus_(title); // 'cafe' | 'online'
 
     const rawStart = event.getStartTime();
     const rawEnd = event.getEndTime();
