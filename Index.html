@@ -1160,24 +1160,50 @@
     }
     
     #evaluationModal .modal-content {
-      max-width: 800px;
+      max-width: 900px;
       max-height: 90vh;
       overflow-y: auto;
+      padding: 1.5rem 2rem;
     }
     
     #evaluationModal h3 {
-      margin-top: 1.5em;
-      margin-bottom: 0.5em;
+      margin-top: 1.25rem;
+      margin-bottom: 0.75rem;
       color: #219150;
+      font-size: 1.125rem;
+      font-weight: 600;
+    }
+    
+    #evaluationModal h3:first-of-type {
+      margin-top: 0;
+    }
+    
+    #evaluationModal label {
+      display: block;
+      margin-bottom: 0.25rem;
+      font-weight: 500;
+      color: #374151;
+      font-size: 0.875rem;
+    }
+    
+    .eval-student-field {
+      margin-bottom: 1rem;
+    }
+    .eval-student-input {
+      background: #f3f4f6;
+      color: #111827;
+    }
+    #evaluationModal .grid {
+      margin-bottom: 0.5rem;
     }
     
     #evaluationModal textarea {
       width: 100%;
       box-sizing: border-box;
       font-size: 1em;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      padding: 0.5rem;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
       resize: vertical;
     }
     
@@ -1185,24 +1211,34 @@
       width: 100%;
       box-sizing: border-box;
       font-size: 1em;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      padding: 0.5rem;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+    }
+    
+    #evaluationModal input[type="text"]:focus,
+    #evaluationModal input[type="date"]:focus {
+      outline: none;
+      border-color: #219150;
+      box-shadow: 0 0 0 2px rgba(33, 145, 80, 0.2);
     }
     
     #evaluationModal button {
-      margin-top: 1em;
+      margin-top: 1.25rem;
       background-color: #219150;
       color: white;
       border: none;
-      padding: 0.75rem;
-      border-radius: 4px;
+      padding: 0.65rem 1.25rem;
+      border-radius: 8px;
       cursor: pointer;
-      font-size: 1em;
+      font-size: 0.9375rem;
+      font-weight: 500;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
     
     #evaluationModal button:hover {
       background-color: #197a40;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
     }
     
     /* Evaluation Button */
@@ -1307,25 +1343,67 @@
       transform: none;
     }
 
+    .eval-section-label {
+      margin: 0 0 0.5rem 0;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: #6b7280;
+    }
+    .eval-placeholder-row td {
+      text-align: center;
+      padding: 1rem 0.75rem;
+      color: #9ca3af;
+      font-style: italic;
+      font-size: 0.875rem;
+      background: #f9fafb;
+    }
     /* Evaluation Table Styling */
+    .evals-table,
+    #evalsTable {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1.25rem;
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
     #evalsTable th,
     #evalsTable td {
       text-align: center;
-      padding: 0;
-      width: 50px !important;
+      padding: 0.5rem 0.35rem;
       box-sizing: border-box;
-      outline: 1px solid red;
+      border: 1px solid #e5e7eb;
+      font-size: 0.875rem;
     }
-    
-    /* Constrain input widths in evaluation table */
+    #evalsTable thead tr {
+      background: #219150;
+      color: #fff;
+    }
+    #evalsTable thead th {
+      font-weight: 600;
+      border-color: #1d7a43;
+    }
+    #evalsTable tbody tr:nth-child(even) {
+      background: #f9fafb;
+    }
+    #evalsTable tbody tr#evalInputRow {
+      background: #f0fdf4;
+    }
     #evalsTable input {
-      width: 100% !important;
-      max-width: 100% !important;
+      width: 100%;
+      max-width: 100%;
       box-sizing: border-box;
-      font-size: 10px;
-      padding: 2px;
-      border: 1px solid #ccc;
-      border-radius: 2px;
+      font-size: 0.8125rem;
+      padding: 0.4rem 0.35rem;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background: #fff;
+    }
+    #evalsTable input:focus {
+      outline: none;
+      border-color: #219150;
+      box-shadow: 0 0 0 2px rgba(33, 145, 80, 0.2);
     }
     
     /* Google Docs and Sheets button colors */
@@ -1787,23 +1865,35 @@
       <span class="close" onclick="closeModal('evaluationModal')">&times;</span>
       <h3>Student Evaluation</h3>
       
-      <label for="evalStudentName">Student Name</label>
-      <input id="evalStudentName" type="text" readonly style="display:none;">
-      <select id="evalStudentDropdown" style="display:none;" onchange="onStudentDropdownChange()"></select>
+      <div class="eval-student-field">
+        <label for="evalStudentName">Student</label>
+        <input id="evalStudentName" type="text" readonly style="display:none;" class="eval-student-input">
+        <select id="evalStudentDropdown" style="display:none;" onchange="onStudentDropdownChange()"></select>
+      </div>
       
       <div class="grid">
         <div>
           <label for="evalLevel">Level</label>
-          <input id="evalLevel" type="text">
+          <select id="evalLevel" aria-label="Level">
+            <option value="">— Select level —</option>
+            <option value="One">One</option>
+            <option value="Two">Two</option>
+            <option value="Three">Three</option>
+            <option value="Four">Four</option>
+          </select>
         </div>
         <div>
           <label for="evalTextbook">Textbook</label>
-          <input id="evalTextbook" type="text">
+          <select id="evalTextbook" aria-label="Textbook">
+            <option value="">— Select textbook —</option>
+            <!-- Book options can be populated by JS when fetched -->
+          </select>
         </div>
       </div>
 
-      <h3>Scores</h3>
-      <table id="evalsTable" style="margin-bottom:16px;">
+      <h3>Evaluations</h3>
+      <p class="eval-section-label">Previous evaluations</p>
+      <table id="evalsTable" class="evals-table">
         <thead>
           <tr>
             <th>Date</th>
@@ -1818,7 +1908,17 @@
           </tr>
         </thead>
         <tbody id="evalsBody">
-          <!-- Input row will be inserted here by JS -->
+          <tr id="evalInputRow">
+            <td><input type="date" id="evalDate" aria-label="Date"></td>
+            <td><input type="number" id="evalGrammar" step="0.5" min="0" max="10" placeholder="0–10" aria-label="Grammar"></td>
+            <td><input type="number" id="evalVocab" step="0.5" min="0" max="10" placeholder="0–10" aria-label="Vocab"></td>
+            <td><input type="number" id="evalSpeaking" step="0.5" min="0" max="10" placeholder="0–10" aria-label="Speaking"></td>
+            <td><input type="number" id="evalListening" step="0.5" min="0" max="10" placeholder="0–10" aria-label="Listening"></td>
+            <td><input type="number" id="evalReading" step="0.5" min="0" max="10" placeholder="0–10" aria-label="Reading"></td>
+            <td><input type="number" id="evalWriting" step="0.5" min="0" max="10" placeholder="0–10" aria-label="Writing"></td>
+            <td><input type="number" id="evalFluency" step="0.5" min="0" max="10" placeholder="0–10" aria-label="Fluency"></td>
+            <td><input type="number" id="evalSelf" step="0.5" min="0" max="10" placeholder="0–10" aria-label="Self-study"></td>
+          </tr>
         </tbody>
       </table>
 
@@ -3455,42 +3555,73 @@
     }
 
     // Evaluation Functions
+    function parseStudentNamesFromEvent(eventData) {
+      const raw = (eventData && eventData.studentNames) ? String(eventData.studentNames).trim() : '';
+      if (!raw) return [];
+      return raw.split(/\s+and\s+|\s*,\s*/i).map(function(s) { return s.trim(); }).filter(Boolean);
+    }
+
     function openEvaluationModal(eventData) {
       const folderName = eventData.folderName || '';
       const evalInput = document.getElementById('evalStudentName');
       const evalDropdown = document.getElementById('evalStudentDropdown');
-      // Fetch student names from server by folderName
+      const eventNames = parseStudentNamesFromEvent(eventData);
+
+      // Show placeholder for previous evaluations immediately so the space is visible
+      renderEvaluationTable([]);
+
+      // Pre-fill student name from the lesson/event so it's never blank
+      if (eventNames.length > 1) {
+        evalInput.style.display = 'none';
+        evalDropdown.style.display = '';
+        evalDropdown.innerHTML = '';
+        eventNames.forEach(function(name) {
+          const opt = document.createElement('option');
+          opt.value = name;
+          opt.textContent = name;
+          evalDropdown.appendChild(opt);
+        });
+        evalDropdown.value = eventNames[0];
+        loadStudentEvaluations(eventNames[0]);
+      } else if (eventNames.length === 1) {
+        evalDropdown.style.display = 'none';
+        evalInput.style.display = '';
+        evalInput.value = eventNames[0];
+        loadStudentEvaluations(eventNames[0]);
+      } else {
+        evalDropdown.style.display = 'none';
+        evalInput.style.display = '';
+        evalInput.value = '';
+      }
+
+      document.getElementById('evaluationModal').classList.add('show');
+
+      // Optionally sync from server (Student List) when available
       google.script.run
         .withSuccessHandler(function(names) {
-          if (Array.isArray(names) && names.length > 1) {
-            evalInput.style.display = 'none';
-            evalDropdown.style.display = '';
-            evalDropdown.innerHTML = '';
-            names.forEach(name => {
-              const opt = document.createElement('option');
-              opt.value = name;
-              opt.textContent = name;
-              evalDropdown.appendChild(opt);
-            });
-            // Load evaluations for the first student in dropdown
-            if (names.length > 0) {
+          if (Array.isArray(names) && names.length > 0) {
+            if (names.length > 1) {
+              evalInput.style.display = 'none';
+              evalDropdown.style.display = '';
+              evalDropdown.innerHTML = '';
+              names.forEach(function(name) {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                evalDropdown.appendChild(opt);
+              });
+              var current = evalDropdown.value;
+              if (!names.includes(current)) evalDropdown.value = names[0];
+              loadStudentEvaluations(evalDropdown.value);
+            } else {
+              evalDropdown.style.display = 'none';
+              evalInput.style.display = '';
+              evalInput.value = names[0];
               loadStudentEvaluations(names[0]);
             }
-          } else {
-            evalDropdown.style.display = 'none';
-            evalInput.style.display = '';
-            evalInput.value = names && names.length === 1 ? names[0] : '';
-            // Load previous evaluations for the single student
-            const studentName = names && names.length === 1 ? names[0] : '';
-            if (studentName) {
-              loadStudentEvaluations(studentName);
-            }
           }
-          document.getElementById('evaluationModal').classList.add('show');
         })
-        .withFailureHandler(function(e) {
-          alert('Could not fetch student names: ' + e.message);
-        })
+        .withFailureHandler(function() { /* keep pre-filled name and table */ })
         .getStudentNamesByFolder(folderName);
     }
 
@@ -3508,45 +3639,36 @@
 
     function renderEvaluationTable(evaluations) {
       const tbody = document.getElementById('evalsBody');
-      tbody.innerHTML = '';
-      
-      // Add previous evaluation rows
-      evaluations.forEach(eval => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${eval.evaluationDate}</td>
-          <td>${eval.grammar}</td>
-          <td>${eval.vocabulary}</td>
-          <td>${eval.speaking}</td>
-          <td>${eval.listening}</td>
-          <td>${eval.reading}</td>
-          <td>${eval.writing}</td>
-          <td>${eval.fluency}</td>
-          <td>${eval.selfStudy}</td>
-        `;
-        tbody.appendChild(row);
-      });
-      
-      // Add input row at the bottom
-      renderEvalInputRow();
-    }
-
-    function renderEvalInputRow() {
-      const tbody = document.getElementById('evalsBody');
-      tbody.innerHTML = '';
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td><input type="date" id="evalDate"></td>
-        <td><input type="number" id="evalGrammar" step="0.5"></td>
-        <td><input type="number" id="evalVocab" step="0.5"></td>
-        <td><input type="number" id="evalSpeaking" step="0.5"></td>
-        <td><input type="number" id="evalListening" step="0.5"></td>
-        <td><input type="number" id="evalReading" step="0.5"></td>
-        <td><input type="number" id="evalWriting" step="0.5"></td>
-        <td><input type="number" id="evalFluency" step="0.5"></td>
-        <td><input type="number" id="evalSelf" step="0.5"></td>
-      `;
-      tbody.appendChild(row);
+      const inputRow = document.getElementById('evalInputRow');
+      if (!inputRow) return;
+      // Remove any previous evaluation rows and placeholder (everything that is not the input row)
+      while (tbody.firstChild && tbody.firstChild !== inputRow) {
+        tbody.removeChild(tbody.firstChild);
+      }
+      const list = evaluations || [];
+      if (list.length > 0) {
+        list.forEach(eval => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${eval.evaluationDate || ''}</td>
+            <td>${eval.grammar ?? ''}</td>
+            <td>${eval.vocabulary ?? ''}</td>
+            <td>${eval.speaking ?? ''}</td>
+            <td>${eval.listening ?? ''}</td>
+            <td>${eval.reading ?? ''}</td>
+            <td>${eval.writing ?? ''}</td>
+            <td>${eval.fluency ?? ''}</td>
+            <td>${eval.selfStudy ?? ''}</td>
+          `;
+          tbody.insertBefore(row, inputRow);
+        });
+      } else {
+        const placeholder = document.createElement('tr');
+        placeholder.id = 'evalPlaceholderRow';
+        placeholder.className = 'eval-placeholder-row';
+        placeholder.innerHTML = '<td colspan="9">No previous evaluations yet. They will appear here when loaded.</td>';
+        tbody.insertBefore(placeholder, inputRow);
+      }
     }
 
     function generateEvaluationPDF() {

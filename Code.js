@@ -580,7 +580,7 @@ function createFoldersForStudents(eventName, students) {
 }
 
 function manual() {
-  fetchAndCacheTodayLessons('17/02/2026');
+  fetchAndCacheTodayLessons('25/02/2026');
 }
 
 /**
