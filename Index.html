@@ -2350,11 +2350,12 @@
           markerContainer.appendChild(teacherDiv);
         }
 
-        // Status badge last so it appears rightmost: cafe, online, cancelled, rescheduled, regular
-        const statusLabels = { cafe: 'Cafe', online: 'Online', cancelled: 'Cancelled', rescheduled: 'Rescheduled', regular: 'In person' };
+        // Status badge last so it appears rightmost: cafe, online (no in-person; regular = Online)
+        const statusLabels = { cafe: 'Cafe', online: 'Online', cancelled: 'Cancelled', rescheduled: 'Rescheduled', regular: 'Online' };
         if (status && statusLabels[status]) {
           const statusBadge = document.createElement('span');
-          statusBadge.className = `status-badge status-badge--${status}`;
+          const badgeStatus = status === 'regular' ? 'online' : status; // regular displays as Online
+          statusBadge.className = `status-badge status-badge--${badgeStatus}`;
           statusBadge.textContent = statusLabels[status];
           markerContainer.appendChild(statusBadge);
         }
